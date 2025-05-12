@@ -1,0 +1,516 @@
+.book-list {
+  padding: 20px;
+}
+
+.book-list__title {
+  font-size: 24px;
+  color: #2c3e50;
+  margin-bottom: 20px;
+}
+
+.book-list__actions {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.book-list__search {
+  position: relative;
+  margin-right: 10px; /* Khoảng cách nhỏ giữa thanh tìm kiếm và nút */
+  flex-shrink: 0; /* Ngăn thanh tìm kiếm bị co lại quá mức */
+}
+
+.book-list__search-input {
+  padding: 10px 10px 10px 35px;
+  width: 70%;
+  max-width: 300px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>')
+    10px center / 16px no-repeat;
+  background-color: white;
+}
+
+.book-list__search-input:focus {
+  border-color: #3498db;
+  box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+  outline: none;
+}
+
+.book-list__create-button {
+  padding: 10px 20px;
+  background-color: #2ecc71;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-left: 10px; /* Đảm bảo khoảng cách từ thanh tìm kiếm */
+  flex-shrink: 0; /* Ngăn button bị co lại */
+}
+
+.book-list__create-button:hover {
+  background-color: #27ae60;
+  transform: translateY(-1px);
+}
+
+.book-list__table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: white;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.book-list__table th,
+.book-list__table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.book-list__table th {
+  background-color: #2c3e50;
+  color: white;
+  font-weight: 600;
+}
+
+.book-list__table-row:hover {
+  background-color: #f5f5f5;
+}
+
+.book-list__table-row--loading {
+  opacity: 0.5;
+}
+
+.book-list__status--deleted {
+  color: #e74c3c;
+  font-weight: 500;
+}
+
+.book-list__status--active {
+  color: #2ecc71;
+  font-weight: 500;
+}
+
+.book-list__action-button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-right: 5px;
+  transition: all 0.3s ease;
+}
+
+.book-list__action-button--edit {
+  background-color: #3498db;
+  color: white;
+}
+
+.book-list__action-button--edit:hover {
+  background-color: #2980b9;
+}
+
+.book-list__action-button--view {
+  background-color: #f39c12;
+  color: white;
+}
+
+.book-list__action-button--view:hover {
+  background-color: #e67e22;
+}
+
+.book-list__pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.book-list__pagination-button {
+  padding: 8px 12px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.book-list__pagination-button:disabled {
+  background-color: #95a5a6;
+  cursor: not-allowed;
+}
+
+.book-list__pagination-button:hover:not(:disabled) {
+  background-color: #2980b9;
+}
+
+.book-list__pagination-button--active {
+  background-color: #2ecc71;
+  cursor: default;
+}
+
+.book-list__modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.book-list__modal-content {
+  background-color: white;
+  padding: 25px;
+  border-radius: 8px;
+  position: relative;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.book-list__modal-content--create {
+  width: 100%;
+  max-width: 600px;
+}
+
+.book-list__modal-content--details {
+  width: 100%;
+  max-width: 600px;
+  text-align: left;
+}
+
+.book-list__modal-title {
+  margin: 0 0 20px;
+  font-size: 22px;
+  color: #2c3e50;
+  text-align: center;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+}
+
+.book-list__modal-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 24px;
+  cursor: pointer;
+  color: #333;
+  transition: color 0.3s ease;
+}
+
+.book-list__modal-close:hover {
+  color: #e74c3c;
+}
+
+.book-list__form-group {
+  margin-bottom: 15px;
+}
+
+.book-list__label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.book-list__input,
+.book-list__select,
+.book-list__textarea {
+  padding: 10px;
+  width: 100%;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.book-list__textarea {
+  height: 100px;
+  resize: vertical;
+}
+
+.book-list__input:focus,
+.book-list__select:focus,
+.book-list__textarea:focus {
+  border-color: #3498db;
+  box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+  outline: none;
+}
+
+.book-list__checkbox {
+  margin: 0 5px 0 0;
+  width: auto;
+}
+
+.book-list__checkbox-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.book-list__form-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.book-list__modal-button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.book-list__modal-button--submit {
+  background-color: #3498db;
+  color: white;
+}
+
+.book-list__modal-button--submit:hover {
+  background-color: #2980b9;
+}
+
+.book-list__modal-button--cancel {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.book-list__modal-button--cancel:hover {
+  background-color: #c0392b;
+}
+
+.book-list__selected-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.book-list__category-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  background-color: #3498db;
+  color: white;
+  border-radius: 6px;
+  font-size: 14px;
+  position: relative;
+}
+
+.book-list__remove-category {
+  margin-left: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 15px;
+  height: 15px;
+  line-height: 15px;
+  text-align: center;
+  background-color: #e74c3c;
+  border-radius: 50%;
+  transition: background-color 0.3s ease;
+}
+
+.book-list__remove-category:hover {
+  background-color: #c0392b;
+}
+
+.book-list__image-previews {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.book-list__image-preview {
+  position: relative;
+}
+
+.book-list__thumbnail {
+  width: 150px;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  margin-bottom: 5px;
+}
+
+.book-list__image {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+}
+
+.book-list__remove-image {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 20px;
+  height: 20px;
+  line-height: 20px;
+  text-align: center;
+  background-color: #e74c3c;
+  color: white;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.book-list__remove-image:hover {
+  background-color: #c0392b;
+}
+
+.book-list__details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.book-list__detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.book-list__detail-item strong {
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.book-list__detail-item p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.book-list__images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.book-list__skeleton {
+  background: #f0f0f0;
+  border-radius: 6px;
+  animation: book-list__pulse 1.5s infinite ease-in-out;
+}
+
+.book-list__skeleton--text {
+  width: 100%;
+  height: 20px;
+  margin: 5px 0;
+}
+
+.book-list__skeleton--button {
+  width: 80px;
+  height: 30px;
+  margin: 5px;
+}
+
+@keyframes book-list__pulse {
+  0% { background-color: #f0f0f0; }
+  50% { background-color: #e0e0e0; }
+  100% { background-color: #f0f0f0; }
+}
+
+.book-list__empty {
+  text-align: center;
+  padding: 20px;
+  color: #7f8c8d;
+}
+
+/* Định dạng cột Đã xóa */
+.book-list__status--deleted-yes {
+  color: #dc3545; /* Màu đỏ cho YES (đã xóa) */
+  font-weight: bold;
+  text-align: center;
+}
+
+.book-list__status--deleted-no {
+  color: #28a745; /* Màu xanh lá cho NO (chưa xóa) */
+  font-weight: bold;
+  text-align: center;
+}
+
+/* Định dạng cột Mới về */
+.book-list__status--new-yes {
+  color: #28a745; /* Màu xanh lá cho YES (mới về) */
+  font-weight: bold;
+  text-align: center;
+}
+
+.book-list__status--new-no {
+  color: #dc3545; /* Màu đỏ cho NO (chưa mới về) */
+  font-weight: bold;
+  text-align: center;
+}
+
+/* Đảm bảo cột Tên sách không bị quá dài */
+.book-list__table td:first-child {
+  max-width: 200px; /* Giới hạn chiều rộng cột Tên sách */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Định dạng cột Đã xóa */
+.book-list__status--deleted-yes {
+  color: #dc3545; /* Màu đỏ cho YES (đã xóa) */
+  font-weight: bold;
+  text-align: center;
+}
+
+.book-list__status--deleted-no {
+  color: #28a745; /* Màu xanh lá cho NO (chưa xóa) */
+  font-weight: bold;
+  text-align: center;
+}
+
+/* Định dạng cột Mới về */
+.book-list__status--new-yes {
+  color: #28a745; /* Màu xanh lá cho YES (mới về) */
+  font-weight: bold;
+  text-align: center;
+}
+
+.book-list__status--new-no {
+  color: #dc3545; /* Màu đỏ cho NO (chưa mới về) */
+  font-weight: bold;
+  text-align: center;
+}
+
+/* Đảm bảo cột Tên sách không bị quá dài */
+.book-list__table td:first-child {
+  max-width: 200px; /* Giới hạn chiều rộng cột Tên sách */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Định dạng nút Khuyến mãi */
+.book-list__action-button--discount {
+  padding: 8px 16px;
+  background-color: #f1c40f;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-right: 5px;
+  transition: all 0.3s ease;
+}
+
+.book-list__action-button--discount:hover {
+  background-color: #d4a017;
+}

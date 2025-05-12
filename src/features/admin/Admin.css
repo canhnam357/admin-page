@@ -1,0 +1,28 @@
+.admin-container {
+  display: flex;
+  min-height: 100vh;
+  padding-top: 60px; /* Chiều cao header */
+}
+
+.admin-content {
+  flex: 1;
+  padding: 20px;
+  margin-left: 250px; /* Chiều rộng của sidebar */
+  max-width: calc(100% - 250px);
+}
+
+@media (max-width: 768px) {
+  .admin-content {
+    margin-left: 200px;
+    max-width: calc(100% - 200px);
+    padding: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-content {
+    margin-left: 180px;
+    max-width: calc(100% - 180px);
+    padding: 10px;
+  }
+}

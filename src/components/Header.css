@@ -1,0 +1,47 @@
+.admin-header {
+  background-color: #34495e;
+  color: #ecf0f1;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1000;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.admin-header__container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 15px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.admin-header__title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.admin-header__nav {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.admin-header__logout-button {
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.admin-header__logout-button:hover {
+  background-color: #c0392b;
+  transform: translateY(-1px);
+}

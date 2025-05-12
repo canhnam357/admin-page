@@ -1,0 +1,52 @@
+.statistics {
+  padding: 20px;
+}
+
+.statistics__title {
+  font-size: 24px;
+  margin-bottom: 20px;
+}
+
+.statistics__filter {
+  margin-bottom: 30px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.statistics__label {
+  font-weight: bold;
+}
+
+.statistics__select {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.statistics__chart-container {
+  margin-bottom: 40px;
+}
+
+.statistics__chart-title {
+  font-size: 20px;
+  margin-bottom: 15px;
+}
+
+.statistics__chart {
+  height: 300px;
+  width: 100%;
+}
+
+.statistics__chart--pie {
+  height: 400px;
+  width: 600px;
+  margin: 0 auto;
+}
+
+.statistics__loading {
+  text-align: center;
+  font-size: 16px;
+  color: #666;
+}
