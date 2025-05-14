@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
 import { fetchBookTypes, createBookType, updateBookType, resetBookTypeState } from './bookTypeSlice';
@@ -9,14 +9,9 @@ const BookTypeList = () => {
   const { bookTypes, loading, error, action } = useSelector((state) => state.bookTypes);
   const [createForm, setCreateForm] = useState({ bookTypeName: '', showModal: false });
   const [editBookType, setEditBookType] = useState(null);
-  const isInitialMount = useRef(true);
 
   useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-    } else {
-      dispatch(fetchBookTypes());
-    }
+    dispatch(fetchBookTypes());
   }, [dispatch]);
 
   useEffect(() => {

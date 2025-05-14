@@ -12,14 +12,9 @@ const PublisherList = () => {
   const [createForm, setCreateForm] = useState({ publisherName: '', showModal: false });
   const [editPublisher, setEditPublisher] = useState(null);
   const inputRef = useRef(null);
-  const isInitialMount = useRef(true);
 
   useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-    } else {
-      dispatch(fetchPublishers({ index: currentPage, size: 10, keyword }));
-    }
+    dispatch(fetchPublishers({ index: currentPage, size: 10, keyword }));
   }, [dispatch, currentPage, keyword]);
 
   useEffect(() => {

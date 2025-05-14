@@ -12,14 +12,9 @@ const DistributorList = () => {
   const [createForm, setCreateForm] = useState({ distributorName: '', showModal: false });
   const [editDistributor, setEditDistributor] = useState(null);
   const inputRef = useRef(null);
-  const isInitialMount = useRef(true);
 
   useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-    } else {
-      dispatch(fetchDistributors({ index: currentPage, size: 10, keyword }));
-    }
+    dispatch(fetchDistributors({ index: currentPage, size: 10, keyword }));
   }, [dispatch, currentPage, keyword]);
 
   useEffect(() => {

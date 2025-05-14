@@ -46,20 +46,15 @@ const BookList = () => {
   const [oldImages, setOldImages] = useState([]);
   const [removedOldImageIds, setRemovedOldImageIds] = useState([]);
   const [discountForm, setDiscountForm] = useState(null);
-  const isInitialMount = useRef(true);
   const searchInputRef = useRef(null);
 
   useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-    } else {
-      dispatch(fetchBooks({ index: currentPage, size: 10, keyword }));
-      dispatch(fetchAuthors({ index: 1, size: 100 }));
-      dispatch(fetchPublishers({ index: 1, size: 100 }));
-      dispatch(fetchDistributors({ index: 1, size: 100 }));
-      dispatch(fetchBookTypes());
-      dispatch(fetchCategories({ keyword: '' }));
-    }
+    dispatch(fetchBooks({ index: currentPage, size: 10, keyword }));
+    dispatch(fetchAuthors({ index: 1, size: 100 }));
+    dispatch(fetchPublishers({ index: 1, size: 100 }));
+    dispatch(fetchDistributors({ index: 1, size: 100 }));
+    dispatch(fetchBookTypes());
+    dispatch(fetchCategories({ keyword: '' }));
   }, [dispatch, currentPage, keyword]);
 
   useEffect(() => {

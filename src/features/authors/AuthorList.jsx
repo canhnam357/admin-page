@@ -16,14 +16,9 @@ const AuthorList = () => {
   const [authorBooks, setAuthorBooks] = useState({ content: [], totalPages: 0, totalElements: 0 });
   const [currentBookPage, setCurrentBookPage] = useState(1);
   const inputRef = useRef(null);
-  const isInitialMount = useRef(true);
 
   useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-    } else {
-      dispatch(fetchAuthors({ index: currentPage, size: 10, keyword }));
-    }
+    dispatch(fetchAuthors({ index: currentPage, size: 10, keyword }));
   }, [dispatch, currentPage, keyword]);
 
   useEffect(() => {
@@ -152,7 +147,6 @@ const AuthorList = () => {
     }
   };
 
-  // Skeleton loading cho bảng
   const renderSkeleton = () => {
     return Array.from({ length: 5 }).map((_, index) => (
       <tr key={index}>

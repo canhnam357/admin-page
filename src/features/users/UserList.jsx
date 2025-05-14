@@ -11,14 +11,9 @@ const UserList = () => {
   const [filters, setFilters] = useState({ email: '', isActive: 2, isVerified: 2 });
   const [editUser, setEditUser] = useState(null);
   const inputRef = useRef(null);
-  const isInitialMount = useRef(true);
 
   useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-    } else {
-      dispatch(fetchUsers({ index: currentPage, size: 10, ...filters }));
-    }
+    dispatch(fetchUsers({ index: currentPage, size: 10, ...filters }));
   }, [dispatch, currentPage, filters]);
 
   useEffect(() => {

@@ -11,14 +11,9 @@ const CategoryList = () => {
   const [createForm, setCreateForm] = useState({ categoryName: '', showModal: false });
   const [editCategory, setEditCategory] = useState(null);
   const inputRef = useRef(null);
-  const isInitialMount = useRef(true);
 
   useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-    } else {
-      dispatch(fetchCategories({ keyword }));
-    }
+    dispatch(fetchCategories({ keyword }));
   }, [dispatch, keyword]);
 
   useEffect(() => {
