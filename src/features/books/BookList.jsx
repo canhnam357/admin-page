@@ -1,19 +1,18 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { toast } from 'react-toastify';
 import { fetchBooks, createBook, updateBook, resetBookState } from './bookSlice';
 import { fetchAuthors } from '../authors/authorSlice';
 import { fetchPublishers } from '../publishers/publisherSlice';
 import { fetchDistributors } from '../distributors/distributorSlice';
 import { fetchBookTypes } from '../book-types/bookTypeSlice';
 import { fetchCategories } from '../categories/categorySlice';
-import './BookList.css';
 import api from '../../api/api';
-import { toast } from 'react-toastify';
-
+import './BookList.css';
 
 const BookList = () => {
   const dispatch = useDispatch();
-  const { books, loading, notification } = useSelector((state) => state.books);
+  const { books, loading, error, action } = useSelector((state) => state.books);
   const { authors } = useSelector((state) => state.authors);
   const { publishers } = useSelector((state) => state.publishers);
   const { distributors } = useSelector((state) => state.distributors);
@@ -46,10 +45,12 @@ const BookList = () => {
   const [oldImages, setOldImages] = useState([]);
   const [removedOldImageIds, setRemovedOldImageIds] = useState([]);
   const [discountForm, setDiscountForm] = useState(null);
+  const [toastShown, setToastShown] = useState(false);
   const searchInputRef = useRef(null);
+  const size = 10;
 
   useEffect(() => {
-    dispatch(fetchBooks({ index: currentPage, size: 10, keyword }));
+    dispatch(fetchBooks({ index: currentPage, size, keyword }));
     dispatch(fetchAuthors({ index: 1, size: 100 }));
     dispatch(fetchPublishers({ index: 1, size: 100 }));
     dispatch(fetchDistributors({ index: 1, size: 100 }));
@@ -58,10 +59,33 @@ const BookList = () => {
   }, [dispatch, currentPage, keyword]);
 
   useEffect(() => {
-    if (!loading && notification?.type === 'success') {
-      dispatch(resetBookState());
+    if (toastShown) return;
+
+    if (!loading && !error) {
+      if (action === 'fetch') {
+        toast.success('Lấy danh sách sách thành công!');
+        setToastShown(true);
+      } else if (action === 'create') {
+        toast.success('Tạo sách thành công!');
+        setToastShown(true);
+      } else if (action === 'update') {
+        toast.success('Sửa sách thành công!');
+        setToastShown(true);
+      }
+    } else if (error) {
+      if (action === 'fetch') {
+        toast.error(`Lấy danh sách sách thất bại: ${error}`);
+      } else if (action === 'create') {
+        toast.error(`Tạo sách thất bại: ${error}`);
+      } else if (action === 'update') {
+        toast.error(`Sửa sách thất bại: ${error}`);
+      }
     }
-  }, [loading, notification, dispatch]);
+
+    return () => {
+      dispatch(resetBookState());
+    };
+  }, [loading, error, action, dispatch, toastShown]);
 
   const handleNextPage = () => {
     if (currentPage < books.totalPages) {
@@ -85,27 +109,96 @@ const BookList = () => {
       if (timeoutId) clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
         const [value] = args;
-        if (value === undefined || value.trim() === '') {
-          func('');
-        } else {
-          func(value);
-        }
+        func(value === undefined || value.trim() === '' ? '' : value);
       }, delay);
     };
   };
 
   const handleSearch = debounce((value) => {
+    setKeyword(value);
     setCurrentPage(1);
-    dispatch(fetchBooks({ index: 1, size: 10, keyword: value }));
   }, 150);
 
   const handleInputChange = (e) => {
     const value = e.target.value;
-    setKeyword(value);
     handleSearch(value);
   };
 
+  const validateBookForm = (form, isEdit = false) => {
+    const {
+      bookName,
+      inStock,
+      price,
+      numberOfPage,
+      weight,
+      authorId,
+      publisherId,
+      distributorId,
+      bookTypeId,
+    } = form;
+
+    if (!bookName.trim()) {
+      toast.error('Tên sách không được rỗng');
+      return false;
+    }
+    if (bookName.trim().length < 2) {
+      toast.error('Tên sách phải có ít nhất 2 ký tự');
+      return false;
+    }
+    if (!isEdit && inStock === '') {
+      toast.error('Số lượng không được rỗng');
+      return false;
+    }
+    if (parseInt(inStock) < 0) {
+      toast.error('Số lượng phải lớn hơn hoặc bằng 0');
+      return false;
+    }
+    if (!isEdit && price === '') {
+      toast.error('Giá không được rỗng');
+      return false;
+    }
+    if (parseFloat(price) <= 0) {
+      toast.error('Giá phải lớn hơn 0');
+      return false;
+    }
+    if (!isEdit && numberOfPage === '') {
+      toast.error('Số trang không được rỗng');
+      return false;
+    }
+    if (parseInt(numberOfPage) <= 0) {
+      toast.error('Số trang phải lớn hơn 0');
+      return false;
+    }
+    if (!isEdit && weight === '') {
+      toast.error('Cân nặng không được rỗng');
+      return false;
+    }
+    if (parseFloat(weight) <= 0) {
+      toast.error('Cân nặng phải lớn hơn 0');
+      return false;
+    }
+    if (!authorId) {
+      toast.error('Vui lòng chọn tác giả');
+      return false;
+    }
+    if (!publisherId) {
+      toast.error('Vui lòng chọn nhà xuất bản');
+      return false;
+    }
+    if (!distributorId) {
+      toast.error('Vui lòng chọn nhà phân phối');
+      return false;
+    }
+    if (!bookTypeId) {
+      toast.error('Vui lòng chọn loại sách');
+      return false;
+    }
+    return true;
+  };
+
   const handleCreate = async () => {
+    if (!validateBookForm(createForm)) return;
+
     try {
       const formData = new FormData();
       formData.append('bookName', createForm.bookName);
@@ -145,9 +238,9 @@ const BookList = () => {
       });
       setSelectedCategories([]);
       setImagePreviews([]);
-      dispatch(fetchBooks({ index: currentPage, size: 10, keyword }));
+      setToastShown(false);
     } catch (err) {
-      // Toast đã được xử lý trong slice, không cần hiển thị ở đây
+      // Toast đã được xử lý trong slice
     }
   };
 
@@ -178,6 +271,8 @@ const BookList = () => {
   };
 
   const handleSaveEdit = async () => {
+    if (!validateBookForm(editForm, true)) return;
+
     try {
       const formData = new FormData();
       formData.append('bookName', editForm.bookName);
@@ -217,9 +312,9 @@ const BookList = () => {
       setImagePreviews([]);
       setOldImages([]);
       setRemovedOldImageIds([]);
-      dispatch(fetchBooks({ index: currentPage, size: 10, keyword }));
+      setToastShown(false);
     } catch (err) {
-      // Toast đã được xử lý trong slice, không cần hiển thị ở đây
+      // Toast đã được xử lý trong slice
     }
   };
 
@@ -325,7 +420,6 @@ const BookList = () => {
       const response = await api.get(`/admin/discounts/${bookId}`);
       const discount = response.data.result;
       if (discount) {
-        // Chuyển đổi định dạng ngày từ dd-MM-yyyy HH:mm:ss sang yyyy-MM-dd
         const [startDay, startMonth, startYear] = discount.startDate.split(' ')[0].split('-');
         const [endDay, endMonth, endYear] = discount.endDate.split(' ')[0].split('-');
         const startDate = `${startYear}-${startMonth.padStart(2, '0')}-${startDay.padStart(2, '0')}`;
@@ -358,6 +452,19 @@ const BookList = () => {
   const handleSaveDiscount = async () => {
     try {
       const { bookId, discountId, startDate, endDate, discountType, discount } = discountForm;
+      if (!discount) {
+        toast.error('Giá trị khuyến mãi không được rỗng');
+        return;
+      }
+      if (discountType === 'PERCENTAGE' && (parseFloat(discount) <= 0 || parseFloat(discount) >= 100)) {
+        toast.error('Giá trị khuyến mãi phần trăm phải từ 0 đến 99');
+        return;
+      }
+      if (new Date(startDate) > new Date(endDate)) {
+        toast.error('Ngày bắt đầu phải trước ngày kết thúc');
+        return;
+      }
+
       const payload = {
         startDate,
         endDate,
@@ -372,14 +479,14 @@ const BookList = () => {
       }
       setDiscountForm(null);
       toast.success('Cập nhật khuyến mãi thành công!');
-      dispatch(fetchBooks({ index: currentPage, size: 10, keyword }));
+      dispatch(fetchBooks({ index: currentPage, size, keyword }));
     } catch (err) {
-      toast.error(err?.response?.data?.message);
+      toast.error(err?.response?.data?.message || 'Cập nhật khuyến mãi thất bại');
     }
   };
 
   const renderSkeleton = () => {
-    return Array.from({ length: 5 }).map((_, index) => (
+    return Array.from({ length: size }).map((_, index) => (
       <tr key={index} className="book-list__table-row--loading">
         <td><div className="book-list__skeleton book-list__skeleton--text"></div></td>
         <td><div className="book-list__skeleton book-list__skeleton--text"></div></td>
@@ -388,7 +495,7 @@ const BookList = () => {
         <td><div className="book-list__skeleton book-list__skeleton--text"></div></td>
         <td><div className="book-list__skeleton book-list__skeleton--text"></div></td>
         <td><div className="book-list__skeleton book-list__skeleton--text"></div></td>
-        <td><div className="book-list__skeleton book-list__skeleton--button"></div></td>
+        <td><div className="book-list__skeleton book-list__skeleton--text"></div></td>
       </tr>
     ));
   };
@@ -401,11 +508,43 @@ const BookList = () => {
     return name;
   };
 
+  const getPageNumbers = () => {
+    const delta = 1;
+    const range = [];
+    const rangeWithDots = [];
+    const totalPages = books.totalPages || 1;
+
+    const start = Math.max(2, currentPage - delta);
+    const end = Math.min(totalPages - 1, currentPage + delta);
+
+    range.push(1);
+    for (let i = start; i <= end; i++) {
+      range.push(i);
+    }
+    if (totalPages > 1) {
+      range.push(totalPages);
+    }
+
+    let prevPage = null;
+    for (const page of range) {
+      if (prevPage && page - prevPage > 1) {
+        rangeWithDots.push('...');
+      }
+      rangeWithDots.push(page);
+      prevPage = page;
+    }
+
+    return rangeWithDots;
+  };
+
   return (
     <div className="book-list">
       <h2 className="book-list__title">Danh sách sách</h2>
       <div className="book-list__actions">
-        <div className="book-list__search">
+        <div className="book-list__create-form">
+          <button onClick={() => setCreateForm({ ...createForm, showModal: true })}>Thêm sách</button>
+        </div>
+        <div className="book-list__search-bar">
           <input
             ref={searchInputRef}
             type="text"
@@ -416,12 +555,6 @@ const BookList = () => {
             className="book-list__search-input"
           />
         </div>
-        <button
-          className="book-list__create-button"
-          onClick={() => setCreateForm({ ...createForm, showModal: true })}
-        >
-          Tạo sách
-        </button>
       </div>
       <table className="book-list__table">
         <thead>
@@ -439,6 +572,8 @@ const BookList = () => {
         <tbody>
           {loading ? (
             renderSkeleton()
+          ) : error ? (
+            <tr><td colSpan="8" className="book-list__empty">Lỗi: {error}</td></tr>
           ) : books.content && books.content.length > 0 ? (
             books.content.map((book) => (
               <tr key={book.bookId} className="book-list__table-row">
@@ -455,7 +590,7 @@ const BookList = () => {
                 </td>
                 <td>
                   <button className="book-list__action-button book-list__action-button--edit" onClick={() => handleEdit(book)}>Sửa</button>
-                  <button className="book-list__action-button book-list__action-button--view" onClick={() => handleView(book)}>Xem chi tiết</button>
+                  <button className="book-list__action-button book-list__action-button--view" onClick={() => handleView(book)}>Xem</button>
                   <button className="book-list__action-button book-list__action-button--discount" onClick={() => fetchDiscount(book.bookId)}>Khuyến mãi</button>
                 </td>
               </tr>
@@ -473,16 +608,22 @@ const BookList = () => {
         >
           Trang trước
         </button>
-        {Array.from({ length: books.totalPages }, (_, i) => i + 1).map((number) => (
-          <button
-            key={number}
-            className={`book-list__pagination-button ${currentPage === number ? 'book-list__pagination-button--active' : ''}`}
-            onClick={() => handlePageClick(number)}
-            disabled={loading}
-          >
-            {number}
-          </button>
-        ))}
+        {getPageNumbers().map((page, index) =>
+          page === '...' ? (
+            <span key={`ellipsis-${index}`} className="book-list__pagination-ellipsis">
+              ...
+            </span>
+          ) : (
+            <button
+              key={page}
+              className={`book-list__pagination-button ${currentPage === page ? 'book-list__pagination-button--active' : ''}`}
+              onClick={() => handlePageClick(page)}
+              disabled={loading}
+            >
+              {page}
+            </button>
+          )
+        )}
         <button
           className="book-list__pagination-button"
           onClick={handleNextPage}
@@ -500,10 +641,9 @@ const BookList = () => {
               <div className="book-list__detail-item">
                 <strong>Thumbnail:</strong>
                 <img
-                  src={viewBook.urlThumbnail || ''}
+                  src={viewBook.urlThumbnail || 'https://via.placeholder.com/150'}
                   alt="Thumbnail"
                   className="book-list__thumbnail"
-                  onError={(e) => (e.target.src = '')}
                 />
               </div>
               <div className="book-list__detail-item">
@@ -516,7 +656,6 @@ const BookList = () => {
                         src={image.url}
                         alt={image.caption || 'Book image'}
                         className="book-list__image"
-                        onError={(e) => (e.target.src = 'https://via.placeholder.com/100')}
                       />
                     ))
                   ) : (
@@ -524,65 +663,35 @@ const BookList = () => {
                   )}
                 </div>
               </div>
+              <div className="book-list__detail-item"><strong>Tên sách:</strong> {viewBook.bookName}</div>
+              <div className="book-list__detail-item"><strong>Số lượng:</strong> {viewBook.inStock}</div>
+              <div className="book-list__detail-item"><strong>Giá:</strong> {viewBook.price.toLocaleString()} VNĐ</div>
+              <div className="book-list__detail-item"><strong>Mô tả:</strong> <p>{viewBook.description || 'Không có mô tả'}</p></div>
+              <div className="book-list__detail-item"><strong>Số trang:</strong> {viewBook.numberOfPage}</div>
+              <div className="book-list__detail-item"><strong>Ngày xuất bản:</strong> {new Date(viewBook.publishedDate).toLocaleDateString('vi-VN')}</div>
+              <div className="book-list__detail-item"><strong>Cân nặng:</strong> {viewBook.weight} g</div>
+              <div className="book-list__detail-item"><strong>Ngày tạo:</strong> {new Date(viewBook.createdAt).toLocaleDateString('vi-VN')}</div>
+              <div className="book-list__detail-item"><strong>Ngày cập nhật:</strong> {viewBook.updatedAt ? new Date(viewBook.updatedAt).toLocaleDateString('vi-VN') : 'Chưa cập nhật'}</div>
+              <div className="book-list__detail-item"><strong>Tác giả:</strong> {viewBook.author.authorName}</div>
+              <div className="book-list__detail-item"><strong>Nhà xuất bản:</strong> {viewBook.publisher.publisherName}</div>
+              <div className="book-list__detail-item"><strong>Nhà phân phối:</strong> {viewBook.distributor.distributorName}</div>
               <div className="book-list__detail-item">
-                <strong>Tên sách:</strong> {viewBook.bookName}
-              </div>
-              <div className="book-list__detail-item">
-                <strong>Số lượng:</strong> {viewBook.inStock}
-              </div>
-              <div className="book-list__detail-item">
-                <strong>Giá:</strong> {viewBook.price.toLocaleString()} VNĐ
-              </div>
-              <div className="book-list__detail-item">
-                <strong>Mô tả:</strong> <p>{viewBook.description}</p>
-              </div>
-              <div className="book-list__detail-item">
-                <strong>Số trang:</strong> {viewBook.numberOfPage}
-              </div>
-              <div className="book-list__detail-item">
-                <strong>Ngày xuất bản:</strong> {new Date(viewBook.publishedDate).toLocaleDateString('vi-VN')}
-              </div>
-              <div className="book-list__detail-item">
-                <strong>Cân nặng:</strong> {viewBook.weight} g
-              </div>
-              <div className="book-list__detail-item">
-                <strong>Ngày tạo:</strong> {new Date(viewBook.createdAt).toLocaleDateString('vi-VN')}
-              </div>
-              <div className="book-list__detail-item">
-                <strong>Ngày cập nhật:</strong> {viewBook.updatedAt ? new Date(viewBook.updatedAt).toLocaleDateString('vi-VN') : 'Chưa cập nhật'}
-              </div>
-              <div className="book-list__detail-item">
-                <strong>Tác giả:</strong> {viewBook.author.authorName}
-              </div>
-              <div className="book-list__detail-item">
-                <strong>Nhà xuất bản:</strong> {viewBook.publisher.publisherName}
-              </div>
-              <div className="book-list__detail-item">
-                <strong>Nhà phát hành:</strong> {viewBook.distributor.distributorName}
-              </div>
-              <div className="book-list__detail-item">
-                <strong>Danh sách thể loại:</strong>{' '}
+                <strong>Thể loại:</strong>{' '}
                 {viewBook.categories && viewBook.categories.length > 0
                   ? viewBook.categories.map((cat) => cat.categoryName).join(', ')
                   : 'Không có thể loại'}
               </div>
-              <div className="book-list__detail-item">
-                <strong>Loại sách:</strong> {viewBook.bookType.bookTypeName}
-              </div>
-              <div className="book-list__detail-item">
-                <strong>Mới về:</strong> {viewBook.newArrival ? 'Có' : 'Không'}
-              </div>
-              <div className="book-list__detail-item">
-                <strong>Đã xóa:</strong> {viewBook.isDeleted ? 'Có' : 'Không'}
-              </div>
+              <div className="book-list__detail-item"><strong>Loại sách:</strong> {viewBook.bookType.bookTypeName}</div>
+              <div className="book-list__detail-item"><strong>Mới về:</strong> {viewBook.newArrival ? 'Có' : 'Không'}</div>
+              <div className="book-list__detail-item"><strong>Đã xóa:</strong> {viewBook.isDeleted ? 'Có' : 'Không'}</div>
             </div>
           </div>
         </div>
       )}
       {createForm.showModal && (
-        <div className="book-list__modal" onClick={() => resetCreateForm()}>
+        <div className="book-list__modal" onClick={resetCreateForm}>
           <div className="book-list__modal-content book-list__modal-content--create" onClick={(e) => e.stopPropagation()}>
-            <span className="book-list__modal-close" onClick={() => resetCreateForm()}>×</span>
+            <span className="book-list__modal-close" onClick={resetCreateForm}>×</span>
             <h3 className="book-list__modal-title">Tạo sách mới</h3>
             <div className="book-list__form-group">
               <label className="book-list__label">Tên sách</label>
@@ -599,7 +708,7 @@ const BookList = () => {
               <label className="book-list__label">Số lượng (≥ 0)</label>
               <input
                 type="number"
-                placeholder="Số lượng (≥ 0)..."
+                placeholder="Số lượng..."
                 value={createForm.inStock}
                 onChange={(e) => setCreateForm({ ...createForm, inStock: e.target.value })}
                 className="book-list__input"
@@ -609,7 +718,7 @@ const BookList = () => {
               <label className="book-list__label">Giá (> 0)</label>
               <input
                 type="number"
-                placeholder="Giá (> 0)..."
+                placeholder="Giá (VNĐ)..."
                 value={createForm.price}
                 onChange={(e) => setCreateForm({ ...createForm, price: e.target.value })}
                 className="book-list__input"
@@ -629,7 +738,7 @@ const BookList = () => {
               <label className="book-list__label">Số trang (> 0)</label>
               <input
                 type="number"
-                placeholder="Số trang (> 0)..."
+                placeholder="Số trang..."
                 value={createForm.numberOfPage}
                 onChange={(e) => setCreateForm({ ...createForm, numberOfPage: e.target.value })}
                 className="book-list__input"
@@ -648,7 +757,7 @@ const BookList = () => {
               <label className="book-list__label">Cân nặng (> 0)</label>
               <input
                 type="number"
-                placeholder="Cân nặng (> 0)..."
+                placeholder="Cân nặng (g)..."
                 value={createForm.weight}
                 onChange={(e) => setCreateForm({ ...createForm, weight: e.target.value })}
                 className="book-list__input"
@@ -662,7 +771,7 @@ const BookList = () => {
                 className="book-list__select"
               >
                 <option value="">Chọn tác giả</option>
-                {authors.content.map((author) => (
+                {authors.content?.map((author) => (
                   <option key={author.authorId} value={author.authorId}>
                     {author.authorName}
                   </option>
@@ -677,7 +786,7 @@ const BookList = () => {
                 className="book-list__select"
               >
                 <option value="">Chọn nhà xuất bản</option>
-                {publishers.content.map((pub) => (
+                {publishers.content?.map((pub) => (
                   <option key={pub.publisherId} value={pub.publisherId}>
                     {pub.publisherName}
                   </option>
@@ -685,14 +794,14 @@ const BookList = () => {
               </select>
             </div>
             <div className="book-list__form-group">
-              <label className="book-list__label">Nhà phát hành</label>
+              <label className="book-list__label">Nhà phân phối</label>
               <select
                 value={createForm.distributorId}
                 onChange={(e) => setCreateForm({ ...createForm, distributorId: e.target.value })}
                 className="book-list__select"
               >
-                <option value="">Chọn nhà phát hành</option>
-                {distributors.content.map((dist) => (
+                <option value="">Chọn nhà phân phối</option>
+                {distributors.content?.map((dist) => (
                   <option key={dist.distributorId} value={dist.distributorId}>
                     {dist.distributorName}
                   </option>
@@ -789,8 +898,8 @@ const BookList = () => {
               </div>
             )}
             <div className="book-list__form-actions">
-              <button className="book-list__modal-button book-list__modal-button--submit" onClick={handleCreate}>Tạo</button>
-              <button className="book-list__modal-button book-list__modal-button--cancel" onClick={() => resetCreateForm()}>Hủy</button>
+              <button className="book-list__modal-button" onClick={handleCreate}>Tạo</button>
+              <button className="book-list__modal-button book-list__modal-button--cancel" onClick={resetCreateForm}>Hủy</button>
             </div>
           </div>
         </div>
@@ -827,7 +936,7 @@ const BookList = () => {
               <label className="book-list__label">Số lượng (≥ 0)</label>
               <input
                 type="number"
-                placeholder="Số lượng (≥ 0)..."
+                placeholder="Số lượng..."
                 value={editForm.inStock}
                 onChange={(e) => setEditForm({ ...editForm, inStock: e.target.value })}
                 className="book-list__input"
@@ -837,7 +946,7 @@ const BookList = () => {
               <label className="book-list__label">Giá (> 0)</label>
               <input
                 type="number"
-                placeholder="Giá (> 0)..."
+                placeholder="Giá (VNĐ)..."
                 value={editForm.price}
                 onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
                 className="book-list__input"
@@ -857,7 +966,7 @@ const BookList = () => {
               <label className="book-list__label">Số trang (> 0)</label>
               <input
                 type="number"
-                placeholder="Số trang (> 0)..."
+                placeholder="Số trang..."
                 value={editForm.numberOfPage}
                 onChange={(e) => setEditForm({ ...editForm, numberOfPage: e.target.value })}
                 className="book-list__input"
@@ -876,7 +985,7 @@ const BookList = () => {
               <label className="book-list__label">Cân nặng (> 0)</label>
               <input
                 type="number"
-                placeholder="Cân nặng (> 0)..."
+                placeholder="Cân nặng (g)..."
                 value={editForm.weight}
                 onChange={(e) => setEditForm({ ...editForm, weight: e.target.value })}
                 className="book-list__input"
@@ -890,7 +999,7 @@ const BookList = () => {
                 className="book-list__select"
               >
                 <option value="">Chọn tác giả</option>
-                {authors.content.map((author) => (
+                {authors.content?.map((author) => (
                   <option key={author.authorId} value={author.authorId}>
                     {author.authorName}
                   </option>
@@ -905,7 +1014,7 @@ const BookList = () => {
                 className="book-list__select"
               >
                 <option value="">Chọn nhà xuất bản</option>
-                {publishers.content.map((pub) => (
+                {publishers.content?.map((pub) => (
                   <option key={pub.publisherId} value={pub.publisherId}>
                     {pub.publisherName}
                   </option>
@@ -913,14 +1022,14 @@ const BookList = () => {
               </select>
             </div>
             <div className="book-list__form-group">
-              <label className="book-list__label">Nhà phát hành</label>
+              <label className="book-list__label">Nhà phân phối</label>
               <select
                 value={editForm.distributorId}
                 onChange={(e) => setEditForm({ ...editForm, distributorId: e.target.value })}
                 className="book-list__select"
               >
-                <option value="">Chọn nhà phát hành</option>
-                {distributors.content.map((dist) => (
+                <option value="">Chọn nhà phân phối</option>
+                {distributors.content?.map((dist) => (
                   <option key={dist.distributorId} value={dist.distributorId}>
                     {dist.distributorName}
                   </option>
@@ -1036,7 +1145,7 @@ const BookList = () => {
               </div>
             )}
             <div className="book-list__form-actions">
-              <button className="book-list__modal-button book-list__modal-button--submit" onClick={handleSaveEdit}>Lưu</button>
+              <button className="book-list__modal-button" onClick={handleSaveEdit}>Lưu</button>
               <button className="book-list__modal-button book-list__modal-button--cancel" onClick={() => {
                 setEditForm(null);
                 setSelectedCategories([]);
@@ -1050,7 +1159,7 @@ const BookList = () => {
       )}
       {discountForm && (
         <div className="book-list__modal" onClick={() => setDiscountForm(null)}>
-          <div className="book-list__modal-content book-list__modal-content--create" onClick={(e) => e.stopPropagation()}>
+          <div className="book-list__modal-content book-list__modal-content--discount" onClick={(e) => e.stopPropagation()}>
             <span className="book-list__modal-close" onClick={() => setDiscountForm(null)}>×</span>
             <h3 className="book-list__modal-title">Quản lý khuyến mãi</h3>
             <div className="book-list__form-group">
@@ -1093,7 +1202,7 @@ const BookList = () => {
               />
             </div>
             <div className="book-list__form-actions">
-              <button className="book-list__modal-button book-list__modal-button--submit" onClick={handleSaveDiscount}>Lưu</button>
+              <button className="book-list__modal-button" onClick={handleSaveDiscount}>Lưu</button>
               <button className="book-list__modal-button book-list__modal-button--cancel" onClick={() => setDiscountForm(null)}>Hủy</button>
             </div>
           </div>

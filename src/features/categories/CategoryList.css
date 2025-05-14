@@ -1,116 +1,138 @@
-.category-list-container {
+.category-list {
   padding: 20px;
+  font-family: 'Inter', sans-serif;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-.category-list-container h2 {
-  margin-bottom: 20px;
+.category__title {
   font-size: 24px;
-  color: #2c3e50;
+  font-family: 'Lora', serif;
+  font-weight: 700;
+  color: #2d3748;
+  margin-bottom: 20px;
 }
 
-.category-create-form {
+.category__actions {
   margin-bottom: 20px;
   display: flex;
-  gap: 10px;
+  gap: 20px;
+  align-items: center;
 }
 
-.category-create-form input {
-  padding: 8px;
-  width: 200px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-
-.category-create-form button {
+.category__create-form button {
   padding: 8px 16px;
-  background-color: #2ecc71;
+  background-color: #3b82f6;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: background-color 0.3s ease;
 }
 
-.category-create-form button:hover {
-  background-color: #27ae60;
+.category__create-form button:hover {
+  background-color: #2563eb;
 }
 
-.category-search-bar {
-  margin-bottom: 20px;
+.category__search-bar {
   position: relative;
   width: 300px;
 }
 
-.category-search-bar input {
-  padding: 10px 10px 10px 35px;
+.category__search-input {
+  padding: 8px 8px 8px 32px;
   width: 100%;
-  border: 1px solid #ddd;
+  border: 1px solid #e2e8f0;
   border-radius: 4px;
-  outline: none;
   font-size: 14px;
+  font-family: 'Inter', sans-serif;
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
-.category-search-bar input:focus {
-  border-color: #3498db;
-  box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+.category__search-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 5px rgba(59, 130, 246, 0.3);
 }
 
-.category-search-bar::before {
+.category__search-bar::before {
   content: '';
   position: absolute;
   top: 50%;
-  left: 10px;
+  left: 8px;
   transform: translateY(-50%);
   width: 16px;
   height: 16px;
   background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>');
   background-size: contain;
   background-repeat: no-repeat;
-  color: #7f8c8d;
+  color: #6b7280;
 }
 
-.category-table {
+.category__table {
   width: 100%;
   border-collapse: collapse;
-  background-color: white;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
-.category-table th,
-.category-table td {
+.category__table th,
+.category__table td {
   padding: 12px;
   text-align: left;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid #e2e8f0;
 }
 
-.category-table th {
-  background-color: #2c3e50;
-  color: white;
+.category__table th {
+  background-color: #f8fafc;
+  font-weight: 600;
+  color: #2d3748;
+  font-family: 'Inter', sans-serif;
 }
 
-.category-table tr:hover {
+.category__table-row:hover {
   background-color: #f5f5f5;
 }
 
-.category-table td button {
-  padding: 8px 16px;
-  background-color: #3498db;
+.category__table-row--loading td {
+  height: 40px;
+}
+
+.category__skeleton {
+  background-color: #e2e8f0;
+  animation: pulse 1.5s infinite;
+}
+
+.category__skeleton--text {
+  width: 100%;
+  height: 16px;
+}
+
+.category__action-button {
+  padding: 6px 12px;
+  background-color: #3b82f6;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: background-color 0.3s ease;
 }
 
-.category-table td button:hover {
-  background-color: #2980b9;
+.category__action-button:hover {
+  background-color: #2563eb;
 }
 
-.category-modal {
+.category__modal {
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
+  width: 100%;
+  height: 100%;
   background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
@@ -118,62 +140,87 @@
   z-index: 1000;
 }
 
-.category-modal-content {
+.category__modal-content {
   background-color: white;
   padding: 20px;
-  border-radius: 5px;
-  text-align: center;
+  border-radius: 8px;
+  position: relative;
+  width: 400px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.category-modal-content input {
+.category__modal-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 20px;
+  cursor: pointer;
+  color: #4a5568;
+}
+
+.category__modal-close:hover {
+  color: #2d3748;
+}
+
+.category__modal-title {
+  font-size: 20px;
+  font-family: 'Lora', serif;
+  font-weight: 700;
+  color: #2d3748;
+  margin-bottom: 15px;
+}
+
+.category__modal-input {
   padding: 8px;
   margin: 10px 0;
-  width: 200px;
-  border: 1px solid #ddd;
+  width: 100%;
+  border: 1px solid #e2e8f0;
   border-radius: 4px;
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
 }
 
-.category-modal-content button {
+.category__modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 15px;
+}
+
+.category__modal-button {
   padding: 8px 16px;
-  margin: 0 5px;
-  background-color: #3498db;
+  background-color: #3b82f6;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: background-color 0.3s ease;
 }
 
-.category-modal-content button:hover {
-  background-color: #2980b9;
-}
-.skeleton {
-  background: #f0f0f0;
-  border-radius: 4px;
-  animation: pulse 1.5s infinite ease-in-out;
+.category__modal-button:hover {
+  background-color: #2563eb;
 }
 
-.skeleton-text {
-  width: 100%;
-  height: 20px;
-  margin: 5px 0;
+.category__modal-button--cancel {
+  background-color: #6b7280;
 }
 
-.skeleton-button {
-  width: 60px;
-  height: 30px;
-  margin: 5px;
+.category__modal-button--cancel:hover {
+  background-color: #4b5563;
+}
+
+.category__empty {
+  text-align: center;
+  padding: 20px;
+  color: #4a5568;
+  font-family: 'Inter', sans-serif;
 }
 
 @keyframes pulse {
-  0% { background-color: #f0f0f0; }
-  50% { background-color: #e0e0e0; }
-  100% { background-color: #f0f0f0; }
-}
-
-.category-table tbody tr {
-  transition: opacity 0.3s ease-in-out;
-}
-
-.category-table tbody tr.loading {
-  opacity: 0.5;
+  0% { opacity: 1; }
+  50% { opacity: 0.6; }
+  100% { opacity: 1; }
 }

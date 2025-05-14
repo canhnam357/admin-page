@@ -10,6 +10,7 @@ const CategoryList = () => {
   const [keyword, setKeyword] = useState('');
   const [createForm, setCreateForm] = useState({ categoryName: '', showModal: false });
   const [editCategory, setEditCategory] = useState(null);
+  const [toastShown, setToastShown] = useState(false);
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -17,33 +18,33 @@ const CategoryList = () => {
   }, [dispatch, keyword]);
 
   useEffect(() => {
+    if (toastShown) return;
+
     if (!loading && !error) {
       if (action === 'fetch') {
-        toast.dismiss();
         toast.success('Lấy danh sách thể loại thành công!');
+        setToastShown(true);
       } else if (action === 'create') {
-        toast.dismiss();
         toast.success('Tạo thể loại thành công!');
+        setToastShown(true);
       } else if (action === 'update') {
-        toast.dismiss();
         toast.success('Sửa thể loại thành công!');
+        setToastShown(true);
       }
     } else if (error) {
       if (action === 'fetch') {
-        toast.dismiss();
         toast.error(`Lấy danh sách thể loại thất bại: ${error}`);
       } else if (action === 'create') {
-        toast.dismiss();
         toast.error(`Tạo thể loại thất bại: ${error}`);
       } else if (action === 'update') {
-        toast.dismiss();
         toast.error(`Sửa thể loại thất bại: ${error}`);
       }
     }
+
     return () => {
       dispatch(resetCategoryState());
     };
-  }, [loading, error, action, dispatch]);
+  }, [loading, error, action, dispatch, toastShown]);
 
   const debounce = (func, delay) => {
     let timeoutId;
@@ -51,32 +52,37 @@ const CategoryList = () => {
       if (timeoutId) clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
         const [value] = args;
-        if (value === undefined || value.trim() === '') {
-          func('');
-        } else {
-          func(value);
-        }
+        func(value === undefined || value.trim() === '' ? '' : value);
       }, delay);
     };
   };
 
   const handleSearch = debounce((value) => {
-    dispatch(fetchCategories({ keyword: value }));
+    setKeyword(value);
   }, 150);
 
   const handleInputChange = (e) => {
     const value = e.target.value;
-    setKeyword(value);
     handleSearch(value);
   };
 
+  const validateCategoryName = (name) => {
+    if (!name.trim()) {
+      toast.error('Tên thể loại không được rỗng');
+      return false;
+    }
+    if (name.trim().length < 2) {
+      toast.error('Tên thể loại phải có ít nhất 2 ký tự');
+      return false;
+    }
+    return true;
+  };
+
   const handleCreate = () => {
-    if (createForm.categoryName.trim()) {
+    if (validateCategoryName(createForm.categoryName)) {
       dispatch(createCategory(createForm.categoryName));
       setCreateForm({ categoryName: '', showModal: false });
-    } else {
-      toast.dismiss();
-      toast.error('Tên thể loại không được rỗng');
+      setToastShown(false);
     }
   };
 
@@ -85,41 +91,43 @@ const CategoryList = () => {
   };
 
   const handleSaveEdit = () => {
-    if (editCategory && editCategory.categoryName) {
+    if (editCategory && validateCategoryName(editCategory.categoryName)) {
       dispatch(updateCategory({ categoryId: editCategory.categoryId, categoryName: editCategory.categoryName }));
       setEditCategory(null);
+      setToastShown(false);
     }
   };
 
   const renderSkeleton = () => {
     return Array.from({ length: 5 }).map((_, index) => (
-      <tr key={index}>
-        <td><div className="skeleton skeleton-text"></div></td>
-        <td><div className="skeleton skeleton-text"></div></td>
-        <td><div className="skeleton skeleton-button"></div></td>
+      <tr key={index} className="category__table-row--loading">
+        <td><div className="category__skeleton category__skeleton--text"></div></td>
+        <td><div className="category__skeleton category__skeleton--text"></div></td>
+        <td><div className="category__skeleton category__skeleton--text"></div></td>
       </tr>
     ));
   };
 
-  if (error) return <p>Lỗi: {error}</p>;
-
   return (
-    <div className="category-list-container">
-      <h2>Danh sách thể loại</h2>
-      <div className="category-create-form">
-        <button onClick={() => setCreateForm({ ...createForm, showModal: true })}>Thêm thể loại</button>
+    <div className="category-list">
+      <h2 className="category__title">Danh sách thể loại</h2>
+      <div className="category__actions">
+        <div className="category__create-form">
+          <button onClick={() => setCreateForm({ ...createForm, showModal: true })}>Thêm thể loại</button>
+        </div>
+        <div className="category__search-bar">
+          <input
+            ref={inputRef}
+            type="text"
+            lang="vi"
+            placeholder="Tìm kiếm thể loại..."
+            value={keyword}
+            onChange={handleInputChange}
+            className="category__search-input"
+          />
+        </div>
       </div>
-      <div className="category-search-bar">
-        <input
-          ref={inputRef}
-          type="text"
-          lang="vi"
-          placeholder="Tìm kiếm thể loại..."
-          value={keyword}
-          onChange={handleInputChange}
-        />
-      </div>
-      <table className="category-table">
+      <table className="category__table">
         <thead>
           <tr>
             <th>ID</th>
@@ -130,52 +138,67 @@ const CategoryList = () => {
         <tbody>
           {loading ? (
             renderSkeleton()
+          ) : error ? (
+            <tr><td colSpan="3" className="category__empty">Lỗi: {error}</td></tr>
           ) : categories.length > 0 ? (
             categories.map((category) => (
-              <tr key={category.categoryId}>
+              <tr key={category.categoryId} className="category__table-row">
                 <td>{category.categoryId}</td>
                 <td>{category.categoryName}</td>
                 <td>
-                  <button onClick={() => handleEdit(category)}>Sửa</button>
+                  <button className="category__action-button" onClick={() => handleEdit(category)}>Sửa</button>
                 </td>
               </tr>
             ))
           ) : (
-            <tr><td colSpan="3">Không có thể loại nào</td></tr>
+            <tr><td colSpan="3" className="category__empty">Không có thể loại nào</td></tr>
           )}
         </tbody>
       </table>
       {createForm.showModal && (
-        <div className="category-modal">
-          <div className="category-modal-content">
-            <span className="close-modal" onClick={() => setCreateForm({ ...createForm, showModal: false })}>
+        <div className="category__modal" onClick={() => setCreateForm({ ...createForm, showModal: false })}>
+          <div className="category__modal-content" onClick={(e) => e.stopPropagation()}>
+            <span className="category__modal-close" onClick={() => setCreateForm({ ...createForm, showModal: false })}>
               ×
             </span>
-            <h3>Tạo thể loại mới</h3>
+            <h3 className="category__modal-title">Tạo thể loại mới</h3>
             <input
               type="text"
               lang="vi"
               placeholder="Tên thể loại..."
               value={createForm.categoryName}
               onChange={(e) => setCreateForm({ ...createForm, categoryName: e.target.value })}
+              className="category__modal-input"
             />
-            <button onClick={handleCreate}>Tạo</button>
-            <button onClick={() => setCreateForm({ ...createForm, showModal: false })}>Hủy</button>
+            <div className="category__modal-actions">
+              <button className="category__modal-button" onClick={handleCreate}>Tạo</button>
+              <button className="category__modal-button category__modal-button--cancel" onClick={() => setCreateForm({ ...createForm, showModal: false })}>
+                Hủy
+              </button>
+            </div>
           </div>
         </div>
       )}
       {editCategory && (
-        <div className="category-modal">
-          <div className="category-modal-content">
-            <h3>Chỉnh sửa thể loại</h3>
+        <div className="category__modal" onClick={() => setEditCategory(null)}>
+          <div className="category__modal-content" onClick={(e) => e.stopPropagation()}>
+            <span className="category__modal-close" onClick={() => setEditCategory(null)}>
+              ×
+            </span>
+            <h3 className="category__modal-title">Chỉnh sửa thể loại</h3>
             <input
               type="text"
               lang="vi"
               value={editCategory.categoryName}
               onChange={(e) => setEditCategory({ ...editCategory, categoryName: e.target.value })}
+              className="category__modal-input"
             />
-            <button onClick={handleSaveEdit}>Lưu</button>
-            <button onClick={() => setEditCategory(null)}>Hủy</button>
+            <div className="category__modal-actions">
+              <button className="category__modal-button" onClick={handleSaveEdit}>Lưu</button>
+              <button className="category__modal-button category__modal-button--cancel" onClick={() => setEditCategory(null)}>
+                Hủy
+              </button>
+            </div>
           </div>
         </div>
       )}

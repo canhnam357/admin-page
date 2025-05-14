@@ -11,40 +11,42 @@ const PublisherList = () => {
   const [keyword, setKeyword] = useState('');
   const [createForm, setCreateForm] = useState({ publisherName: '', showModal: false });
   const [editPublisher, setEditPublisher] = useState(null);
+  const [toastShown, setToastShown] = useState(false);
   const inputRef = useRef(null);
+  const size = 10;
 
   useEffect(() => {
-    dispatch(fetchPublishers({ index: currentPage, size: 10, keyword }));
-  }, [dispatch, currentPage, keyword]);
+    dispatch(fetchPublishers({ index: currentPage, size, keyword }));
+  }, [dispatch, currentPage, keyword, size]);
 
   useEffect(() => {
+    if (toastShown) return;
+
     if (!loading && !error) {
       if (action === 'fetch') {
-        toast.dismiss();
         toast.success('Lấy danh sách nhà xuất bản thành công!');
+        setToastShown(true);
       } else if (action === 'create') {
-        toast.dismiss();
         toast.success('Tạo nhà xuất bản thành công!');
+        setToastShown(true);
       } else if (action === 'update') {
-        toast.dismiss();
         toast.success('Sửa nhà xuất bản thành công!');
+        setToastShown(true);
       }
     } else if (error) {
       if (action === 'fetch') {
-        toast.dismiss();
         toast.error(`Lấy danh sách nhà xuất bản thất bại: ${error}`);
       } else if (action === 'create') {
-        toast.dismiss();
         toast.error(`Tạo nhà xuất bản thất bại: ${error}`);
       } else if (action === 'update') {
-        toast.dismiss();
         toast.error(`Sửa nhà xuất bản thất bại: ${error}`);
       }
     }
+
     return () => {
       dispatch(resetPublisherState());
     };
-  }, [loading, error, action, dispatch]);
+  }, [loading, error, action, dispatch, toastShown]);
 
   const handleNextPage = () => {
     if (currentPage < publishers.totalPages) {
@@ -68,33 +70,38 @@ const PublisherList = () => {
       if (timeoutId) clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
         const [value] = args;
-        if (value === undefined || value.trim() === '') {
-          func('');
-        } else {
-          func(value);
-        }
+        func(value === undefined || value.trim() === '' ? '' : value);
       }, delay);
     };
   };
 
   const handleSearch = debounce((value) => {
+    setKeyword(value);
     setCurrentPage(1);
-    dispatch(fetchPublishers({ index: 1, size: 10, keyword: value }));
   }, 150);
 
   const handleInputChange = (e) => {
     const value = e.target.value;
-    setKeyword(value);
     handleSearch(value);
   };
 
+  const validatePublisherName = (name) => {
+    if (!name.trim()) {
+      toast.error('Tên nhà xuất bản không được rỗng');
+      return false;
+    }
+    if (name.trim().length < 2) {
+      toast.error('Tên nhà xuất bản phải có ít nhất 2 ký tự');
+      return false;
+    }
+    return true;
+  };
+
   const handleCreate = () => {
-    if (createForm.publisherName.trim()) {
+    if (validatePublisherName(createForm.publisherName)) {
       dispatch(createPublisher(createForm.publisherName));
       setCreateForm({ publisherName: '', showModal: false });
-    } else {
-      toast.dismiss();
-      toast.error('Tên nhà xuất bản không được rỗng');
+      setToastShown(false);
     }
   };
 
@@ -103,46 +110,72 @@ const PublisherList = () => {
   };
 
   const handleSaveEdit = () => {
-    if (editPublisher && editPublisher.publisherName) {
+    if (editPublisher && validatePublisherName(editPublisher.publisherName)) {
       dispatch(updatePublisher({ publisherId: editPublisher.publisherId, publisherName: editPublisher.publisherName }));
       setEditPublisher(null);
+      setToastShown(false);
     }
   };
 
   const renderSkeleton = () => {
-    return Array.from({ length: 5 }).map((_, index) => (
-      <tr key={index}>
-        <td><div className="skeleton skeleton-text"></div></td>
-        <td><div className="skeleton skeleton-text"></div></td>
-        <td><div className="skeleton skeleton-button"></div></td>
+    return Array.from({ length: size }).map((_, index) => (
+      <tr key={index} className="publisher__table-row--loading">
+        <td><div className="publisher__skeleton publisher__skeleton--text"></div></td>
+        <td><div className="publisher__skeleton publisher__skeleton--text"></div></td>
+        <td><div className="publisher__skeleton publisher__skeleton--text"></div></td>
       </tr>
     ));
   };
 
-  if (error) return <p>Lỗi: {error}</p>;
+  const getPageNumbers = () => {
+    const delta = 1;
+    const range = [];
+    const rangeWithDots = [];
+    const totalPages = publishers.totalPages || 1;
 
-  const pageNumbers = [];
-  for (let i = 1; i <= publishers.totalPages; i++) {
-    pageNumbers.push(i);
-  }
+    const start = Math.max(2, currentPage - delta);
+    const end = Math.min(totalPages - 1, currentPage + delta);
+
+    range.push(1);
+    for (let i = start; i <= end; i++) {
+      range.push(i);
+    }
+    if (totalPages > 1) {
+      range.push(totalPages);
+    }
+
+    let prevPage = null;
+    for (const page of range) {
+      if (prevPage && page - prevPage > 1) {
+        rangeWithDots.push('...');
+      }
+      rangeWithDots.push(page);
+      prevPage = page;
+    }
+
+    return rangeWithDots;
+  };
 
   return (
-    <div className="publisher-list-container">
-      <h2>Danh sách nhà xuất bản</h2>
-      <div className="publisher-create-form">
-        <button onClick={() => setCreateForm({ ...createForm, showModal: true })}>Thêm nhà xuất bản</button>
+    <div className="publisher-list">
+      <h2 className="publisher__title">Danh sách nhà xuất bản</h2>
+      <div className="publisher__actions">
+        <div className="publisher__create-form">
+          <button onClick={() => setCreateForm({ ...createForm, showModal: true })}>Thêm nhà xuất bản</button>
+        </div>
+        <div className="publisher__search-bar">
+          <input
+            ref={inputRef}
+            type="text"
+            lang="vi"
+            placeholder="Tìm kiếm nhà xuất bản..."
+            value={keyword}
+            onChange={handleInputChange}
+            className="publisher__search-input"
+          />
+        </div>
       </div>
-      <div className="publisher-search-bar">
-        <input
-          ref={inputRef}
-          type="text"
-          lang="vi"
-          placeholder="Tìm kiếm nhà xuất bản..."
-          value={keyword}
-          onChange={handleInputChange}
-        />
-      </div>
-      <table className="publisher-table">
+      <table className="publisher__table">
         <thead>
           <tr>
             <th>ID</th>
@@ -153,70 +186,99 @@ const PublisherList = () => {
         <tbody>
           {loading ? (
             renderSkeleton()
+          ) : error ? (
+            <tr><td colSpan="3" className="publisher__empty">Lỗi: {error}</td></tr>
           ) : publishers.content && publishers.content.length > 0 ? (
             publishers.content.map((publisher) => (
-              <tr key={publisher.publisherId}>
+              <tr key={publisher.publisherId} className="publisher__table-row">
                 <td>{publisher.publisherId}</td>
                 <td>{publisher.publisherName}</td>
                 <td>
-                  <button onClick={() => handleEdit(publisher)}>Sửa</button>
+                  <button className="publisher__action-button" onClick={() => handleEdit(publisher)}>Sửa</button>
                 </td>
               </tr>
             ))
           ) : (
-            <tr><td colSpan="3">Không có nhà xuất bản nào</td></tr>
+            <tr><td colSpan="3" className="publisher__empty">Không có nhà xuất bản nào</td></tr>
           )}
         </tbody>
       </table>
-      <div className="publisher-pagination">
-        <button onClick={handlePreviousPage} disabled={currentPage === 1 || loading}>
+      <div className="publisher__pagination">
+        <button
+          className="publisher__pagination-button"
+          onClick={handlePreviousPage}
+          disabled={currentPage === 1 || loading}
+        >
           Trang trước
         </button>
-        {pageNumbers.map((number) => (
-          <button
-            key={number}
-            onClick={() => handlePageClick(number)}
-            className={currentPage === number ? 'active' : ''}
-            disabled={loading}
-          >
-            {number}
-          </button>
-        ))}
-        <button onClick={handleNextPage} disabled={currentPage === publishers.totalPages || loading}>
+        {getPageNumbers().map((page, index) =>
+          page === '...' ? (
+            <span key={`ellipsis-${index}`} className="publisher__pagination-ellipsis">
+              ...
+            </span>
+          ) : (
+            <button
+              key={page}
+              className={`publisher__pagination-button ${currentPage === page ? 'publisher__pagination-button--active' : ''}`}
+              onClick={() => handlePageClick(page)}
+              disabled={loading}
+            >
+              {page}
+            </button>
+          )
+        )}
+        <button
+          className="publisher__pagination-button"
+          onClick={handleNextPage}
+          disabled={currentPage === publishers.totalPages || loading}
+        >
           Trang sau
         </button>
       </div>
       {createForm.showModal && (
-        <div className="publisher-modal">
-          <div className="publisher-modal-content">
-            <span className="close-modal" onClick={() => setCreateForm({ ...createForm, showModal: false })}>
+        <div className="publisher__modal" onClick={() => setCreateForm({ ...createForm, showModal: false })}>
+          <div className="publisher__modal-content" onClick={(e) => e.stopPropagation()}>
+            <span className="publisher__modal-close" onClick={() => setCreateForm({ ...createForm, showModal: false })}>
               ×
             </span>
-            <h3>Tạo nhà xuất bản mới</h3>
+            <h3 className="publisher__modal-title">Tạo nhà xuất bản mới</h3>
             <input
               type="text"
               lang="vi"
               placeholder="Tên nhà xuất bản..."
               value={createForm.publisherName}
               onChange={(e) => setCreateForm({ ...createForm, publisherName: e.target.value })}
+              className="publisher__modal-input"
             />
-            <button onClick={handleCreate}>Tạo</button>
-            <button onClick={() => setCreateForm({ ...createForm, showModal: false })}>Hủy</button>
+            <div className="publisher__modal-actions">
+              <button className="publisher__modal-button" onClick={handleCreate}>Tạo</button>
+              <button className="publisher__modal-button publisher__modal-button--cancel" onClick={() => setCreateForm({ ...createForm, showModal: false })}>
+                Hủy
+              </button>
+            </div>
           </div>
         </div>
       )}
       {editPublisher && (
-        <div className="publisher-modal">
-          <div className="publisher-modal-content">
-            <h3>Chỉnh sửa nhà xuất bản</h3>
+        <div className="publisher__modal" onClick={() => setEditPublisher(null)}>
+          <div className="publisher__modal-content" onClick={(e) => e.stopPropagation()}>
+            <span className="publisher__modal-close" onClick={() => setEditPublisher(null)}>
+              ×
+            </span>
+            <h3 className="publisher__modal-title">Chỉnh sửa nhà xuất bản</h3>
             <input
               type="text"
               lang="vi"
               value={editPublisher.publisherName}
               onChange={(e) => setEditPublisher({ ...editPublisher, publisherName: e.target.value })}
+              className="publisher__modal-input"
             />
-            <button onClick={handleSaveEdit}>Lưu</button>
-            <button onClick={() => setEditPublisher(null)}>Hủy</button>
+            <div className="publisher__modal-actions">
+              <button className="publisher__modal-button" onClick={handleSaveEdit}>Lưu</button>
+              <button className="publisher__modal-button publisher__modal-button--cancel" onClick={() => setEditPublisher(null)}>
+                Hủy
+              </button>
+            </div>
           </div>
         </div>
       )}

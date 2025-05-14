@@ -11,40 +11,42 @@ const DistributorList = () => {
   const [keyword, setKeyword] = useState('');
   const [createForm, setCreateForm] = useState({ distributorName: '', showModal: false });
   const [editDistributor, setEditDistributor] = useState(null);
+  const [toastShown, setToastShown] = useState(false);
   const inputRef = useRef(null);
+  const size = 10;
 
   useEffect(() => {
-    dispatch(fetchDistributors({ index: currentPage, size: 10, keyword }));
-  }, [dispatch, currentPage, keyword]);
+    dispatch(fetchDistributors({ index: currentPage, size, keyword }));
+  }, [dispatch, currentPage, keyword, size]);
 
   useEffect(() => {
+    if (toastShown) return;
+
     if (!loading && !error) {
       if (action === 'fetch') {
-        toast.dismiss();
         toast.success('Lấy danh sách nhà phát hành thành công!');
+        setToastShown(true);
       } else if (action === 'create') {
-        toast.dismiss();
         toast.success('Tạo nhà phát hành thành công!');
+        setToastShown(true);
       } else if (action === 'update') {
-        toast.dismiss();
         toast.success('Sửa nhà phát hành thành công!');
+        setToastShown(true);
       }
     } else if (error) {
       if (action === 'fetch') {
-        toast.dismiss();
         toast.error(`Lấy danh sách nhà phát hành thất bại: ${error}`);
       } else if (action === 'create') {
-        toast.dismiss();
         toast.error(`Tạo nhà phát hành thất bại: ${error}`);
       } else if (action === 'update') {
-        toast.dismiss();
         toast.error(`Sửa nhà phát hành thất bại: ${error}`);
       }
     }
+
     return () => {
       dispatch(resetDistributorState());
     };
-  }, [loading, error, action, dispatch]);
+  }, [loading, error, action, dispatch, toastShown]);
 
   const handleNextPage = () => {
     if (currentPage < distributors.totalPages) {
@@ -68,33 +70,38 @@ const DistributorList = () => {
       if (timeoutId) clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
         const [value] = args;
-        if (value === undefined || value.trim() === '') {
-          func('');
-        } else {
-          func(value);
-        }
+        func(value === undefined || value.trim() === '' ? '' : value);
       }, delay);
     };
   };
 
   const handleSearch = debounce((value) => {
+    setKeyword(value);
     setCurrentPage(1);
-    dispatch(fetchDistributors({ index: 1, size: 10, keyword: value }));
   }, 150);
 
   const handleInputChange = (e) => {
     const value = e.target.value;
-    setKeyword(value);
     handleSearch(value);
   };
 
+  const validateDistributorName = (name) => {
+    if (!name.trim()) {
+      toast.error('Tên nhà phát hành không được rỗng');
+      return false;
+    }
+    if (name.trim().length < 2) {
+      toast.error('Tên nhà phát hành phải có ít nhất 2 ký tự');
+      return false;
+    }
+    return true;
+  };
+
   const handleCreate = () => {
-    if (createForm.distributorName.trim()) {
+    if (validateDistributorName(createForm.distributorName)) {
       dispatch(createDistributor(createForm.distributorName));
       setCreateForm({ distributorName: '', showModal: false });
-    } else {
-      toast.dismiss();
-      toast.error('Tên nhà phát hành không được rỗng');
+      setToastShown(false);
     }
   };
 
@@ -103,46 +110,72 @@ const DistributorList = () => {
   };
 
   const handleSaveEdit = () => {
-    if (editDistributor && editDistributor.distributorName) {
+    if (editDistributor && validateDistributorName(editDistributor.distributorName)) {
       dispatch(updateDistributor({ distributorId: editDistributor.distributorId, distributorName: editDistributor.distributorName }));
       setEditDistributor(null);
+      setToastShown(false);
     }
   };
 
   const renderSkeleton = () => {
-    return Array.from({ length: 5 }).map((_, index) => (
-      <tr key={index}>
-        <td><div className="skeleton skeleton-text"></div></td>
-        <td><div className="skeleton skeleton-text"></div></td>
-        <td><div className="skeleton skeleton-button"></div></td>
+    return Array.from({ length: size }).map((_, index) => (
+      <tr key={index} className="distributor__table-row--loading">
+        <td><div className="distributor__skeleton distributor__skeleton--text"></div></td>
+        <td><div className="distributor__skeleton distributor__skeleton--text"></div></td>
+        <td><div className="distributor__skeleton distributor__skeleton--text"></div></td>
       </tr>
     ));
   };
 
-  if (error) return <p>Lỗi: {error}</p>;
+  const getPageNumbers = () => {
+    const delta = 1;
+    const range = [];
+    const rangeWithDots = [];
+    const totalPages = distributors.totalPages || 1;
 
-  const pageNumbers = [];
-  for (let i = 1; i <= distributors.totalPages; i++) {
-    pageNumbers.push(i);
-  }
+    const start = Math.max(2, currentPage - delta);
+    const end = Math.min(totalPages - 1, currentPage + delta);
+
+    range.push(1);
+    for (let i = start; i <= end; i++) {
+      range.push(i);
+    }
+    if (totalPages > 1) {
+      range.push(totalPages);
+    }
+
+    let prevPage = null;
+    for (const page of range) {
+      if (prevPage && page - prevPage > 1) {
+        rangeWithDots.push('...');
+      }
+      rangeWithDots.push(page);
+      prevPage = page;
+    }
+
+    return rangeWithDots;
+  };
 
   return (
-    <div className="distributor-list-container">
-      <h2>Danh sách nhà phát hành</h2>
-      <div className="distributor-create-form">
-        <button onClick={() => setCreateForm({ ...createForm, showModal: true })}>Thêm nhà phát hành</button>
+    <div className="distributor-list">
+      <h2 className="distributor__title">Danh sách nhà phát hành</h2>
+      <div className="distributor__actions">
+        <div className="distributor__create-form">
+          <button onClick={() => setCreateForm({ ...createForm, showModal: true })}>Thêm nhà phát hành</button>
+        </div>
+        <div className="distributor__search-bar">
+          <input
+            ref={inputRef}
+            type="text"
+            lang="vi"
+            placeholder="Tìm kiếm nhà phát hành..."
+            value={keyword}
+            onChange={handleInputChange}
+            className="distributor__search-input"
+          />
+        </div>
       </div>
-      <div className="distributor-search-bar">
-        <input
-          ref={inputRef}
-          type="text"
-          lang="vi"
-          placeholder="Tìm kiếm nhà phát hành..."
-          value={keyword}
-          onChange={handleInputChange}
-        />
-      </div>
-      <table className="distributor-table">
+      <table className="distributor__table">
         <thead>
           <tr>
             <th>ID</th>
@@ -153,70 +186,99 @@ const DistributorList = () => {
         <tbody>
           {loading ? (
             renderSkeleton()
+          ) : error ? (
+            <tr><td colSpan="3" className="distributor__empty">Lỗi: {error}</td></tr>
           ) : distributors.content && distributors.content.length > 0 ? (
             distributors.content.map((distributor) => (
-              <tr key={distributor.distributorId}>
+              <tr key={distributor.distributorId} className="distributor__table-row">
                 <td>{distributor.distributorId}</td>
                 <td>{distributor.distributorName}</td>
                 <td>
-                  <button onClick={() => handleEdit(distributor)}>Sửa</button>
+                  <button className="distributor__action-button" onClick={() => handleEdit(distributor)}>Sửa</button>
                 </td>
               </tr>
             ))
           ) : (
-            <tr><td colSpan="3">Không có nhà phát hành nào</td></tr>
+            <tr><td colSpan="3" className="distributor__empty">Không có nhà phát hành nào</td></tr>
           )}
         </tbody>
       </table>
-      <div className="distributor-pagination">
-        <button onClick={handlePreviousPage} disabled={currentPage === 1 || loading}>
+      <div className="distributor__pagination">
+        <button
+          className="distributor__pagination-button"
+          onClick={handlePreviousPage}
+          disabled={currentPage === 1 || loading}
+        >
           Trang trước
         </button>
-        {pageNumbers.map((number) => (
-          <button
-            key={number}
-            onClick={() => handlePageClick(number)}
-            className={currentPage === number ? 'active' : ''}
-            disabled={loading}
-          >
-            {number}
-          </button>
-        ))}
-        <button onClick={handleNextPage} disabled={currentPage === distributors.totalPages || loading}>
+        {getPageNumbers().map((page, index) =>
+          page === '...' ? (
+            <span key={`ellipsis-${index}`} className="distributor__pagination-ellipsis">
+              ...
+            </span>
+          ) : (
+            <button
+              key={page}
+              className={`distributor__pagination-button ${currentPage === page ? 'distributor__pagination-button--active' : ''}`}
+              onClick={() => handlePageClick(page)}
+              disabled={loading}
+            >
+              {page}
+            </button>
+          )
+        )}
+        <button
+          className="distributor__pagination-button"
+          onClick={handleNextPage}
+          disabled={currentPage === distributors.totalPages || loading}
+        >
           Trang sau
         </button>
       </div>
       {createForm.showModal && (
-        <div className="distributor-modal">
-          <div className="distributor-modal-content">
-            <span className="close-modal" onClick={() => setCreateForm({ ...createForm, showModal: false })}>
+        <div className="distributor__modal" onClick={() => setCreateForm({ ...createForm, showModal: false })}>
+          <div className="distributor__modal-content" onClick={(e) => e.stopPropagation()}>
+            <span className="distributor__modal-close" onClick={() => setCreateForm({ ...createForm, showModal: false })}>
               ×
             </span>
-            <h3>Tạo nhà phát hành mới</h3>
+            <h3 className="distributor__modal-title">Tạo nhà phát hành mới</h3>
             <input
               type="text"
               lang="vi"
               placeholder="Tên nhà phát hành..."
               value={createForm.distributorName}
               onChange={(e) => setCreateForm({ ...createForm, distributorName: e.target.value })}
+              className="distributor__modal-input"
             />
-            <button onClick={handleCreate}>Tạo</button>
-            <button onClick={() => setCreateForm({ ...createForm, showModal: false })}>Hủy</button>
+            <div className="distributor__modal-actions">
+              <button className="distributor__modal-button" onClick={handleCreate}>Tạo</button>
+              <button className="distributor__modal-button distributor__modal-button--cancel" onClick={() => setCreateForm({ ...createForm, showModal: false })}>
+                Hủy
+              </button>
+            </div>
           </div>
         </div>
       )}
       {editDistributor && (
-        <div className="distributor-modal">
-          <div className="distributor-modal-content">
-            <h3>Chỉnh sửa nhà phát hành</h3>
+        <div className="distributor__modal" onClick={() => setEditDistributor(null)}>
+          <div className="distributor__modal-content" onClick={(e) => e.stopPropagation()}>
+            <span className="distributor__modal-close" onClick={() => setEditDistributor(null)}>
+              ×
+            </span>
+            <h3 className="distributor__modal-title">Chỉnh sửa nhà phát hành</h3>
             <input
               type="text"
               lang="vi"
               value={editDistributor.distributorName}
               onChange={(e) => setEditDistributor({ ...editDistributor, distributorName: e.target.value })}
+              className="distributor__modal-input"
             />
-            <button onClick={handleSaveEdit}>Lưu</button>
-            <button onClick={() => setEditDistributor(null)}>Hủy</button>
+            <div className="distributor__modal-actions">
+              <button className="distributor__modal-button" onClick={handleSaveEdit}>Lưu</button>
+              <button className="distributor__modal-button distributor__modal-button--cancel" onClick={() => setEditDistributor(null)}>
+                Hủy
+              </button>
+            </div>
           </div>
         </div>
       )}

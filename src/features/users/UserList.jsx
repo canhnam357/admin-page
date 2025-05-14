@@ -10,34 +10,37 @@ const UserList = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState({ email: '', isActive: 2, isVerified: 2 });
   const [editUser, setEditUser] = useState(null);
-  const inputRef = useRef(null);
+  const [toastShown, setToastShown] = useState(false);
+  const searchInputRef = useRef(null);
+  const size = 10;
 
   useEffect(() => {
-    dispatch(fetchUsers({ index: currentPage, size: 10, ...filters }));
+    dispatch(fetchUsers({ index: currentPage, size, ...filters }));
   }, [dispatch, currentPage, filters]);
 
   useEffect(() => {
+    if (toastShown) return;
+
     if (!loading && !error) {
       if (action === 'fetch') {
-        toast.dismiss();
         toast.success('Lấy danh sách người dùng thành công!');
+        setToastShown(true);
       } else if (action === 'update') {
-        toast.dismiss();
         toast.success('Cập nhật trạng thái người dùng thành công!');
+        setToastShown(true);
       }
     } else if (error) {
       if (action === 'fetch') {
-        toast.dismiss();
         toast.error(`Lấy danh sách người dùng thất bại: ${error}`);
       } else if (action === 'update') {
-        toast.dismiss();
         toast.error(`Cập nhật trạng thái thất bại: ${error}`);
       }
     }
+
     return () => {
       dispatch(resetUserState());
     };
-  }, [loading, error, action, dispatch]);
+  }, [loading, error, action, dispatch, toastShown]);
 
   const handleNextPage = () => {
     if (currentPage < users.totalPages) {
@@ -55,25 +58,48 @@ const UserList = () => {
     setCurrentPage(page);
   };
 
+  const debounce = (func, delay) => {
+    let timeoutId;
+    return (...args) => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        const [value] = args;
+        func(value === undefined || value.trim() === '' ? '' : value);
+      }, delay);
+    };
+  };
+
+  const handleSearch = debounce((value) => {
+    setFilters((prev) => ({ ...prev, email: value }));
+    setCurrentPage(1);
+  }, 150);
+
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
-    setFilters((prev) => ({ ...prev, [name]: value }));
-    setCurrentPage(1); // Reset về trang 1 khi thay đổi bộ lọc
+    if (name === 'email') {
+      handleSearch(value);
+    } else {
+      setFilters((prev) => ({ ...prev, [name]: parseInt(value) }));
+      setCurrentPage(1);
+    }
   };
 
   const handleSaveEdit = async () => {
     if (editUser && (editUser.active !== undefined) && (editUser.verified !== undefined) && (editUser.role !== undefined)) {
       try {
-        await dispatch(updateUserStatus({ userId: editUser.userId, active: editUser.active, verified: editUser.verified, role: editUser.role })).unwrap();
-        // Gọi lại API fetchUsers để tải lại danh sách, giữ nguyên filters và currentPage
-        dispatch(fetchUsers({ index: currentPage, size: 10, ...filters }));
+        await dispatch(updateUserStatus({
+          userId: editUser.userId,
+          active: editUser.active,
+          verified: editUser.verified,
+          role: editUser.role
+        })).unwrap();
         setEditUser(null);
+        setToastShown(false);
+        dispatch(fetchUsers({ index: currentPage, size, ...filters }));
       } catch (err) {
-        toast.dismiss();
         toast.error(`Cập nhật trạng thái thất bại: ${err}`);
       }
     } else {
-      toast.dismiss();
       toast.error('Thiếu thông tin trạng thái active, verified hoặc role');
     }
   };
@@ -84,55 +110,88 @@ const UserList = () => {
   };
 
   const renderSkeleton = () => {
-    return Array.from({ length: 5 }).map((_, index) => (
-      <tr key={index}>
-        <td><div className="skeleton skeleton-text"></div></td>
-        <td><div className="skeleton skeleton-text"></div></td>
-        <td><div className="skeleton skeleton-text"></div></td>
-        <td><div className="skeleton skeleton-text"></div></td>
-        <td><div className="skeleton skeleton-text"></div></td>
-        <td><div className="skeleton skeleton-text"></div></td>
-        <td><div className="skeleton skeleton-text"></div></td>
-        <td><div className="skeleton skeleton-text"></div></td>
-        <td><div className="skeleton skeleton-button"></div></td>
+    return Array.from({ length: size }).map((_, index) => (
+      <tr key={index} className="user-list__table-row--loading">
+        <td><div className="user-list__skeleton user-list__skeleton--text"></div></td>
+        <td><div className="user-list__skeleton user-list__skeleton--text"></div></td>
+        <td><div className="user-list__skeleton user-list__skeleton--text"></div></td>
+        <td><div className="user-list__skeleton user-list__skeleton--text"></div></td>
+        <td><div className="user-list__skeleton user-list__skeleton--text"></div></td>
+        <td><div className="user-list__skeleton user-list__skeleton--text"></div></td>
+        <td><div className="user-list__skeleton user-list__skeleton--text"></div></td>
+        <td><div className="user-list__skeleton user-list__skeleton--text"></div></td>
+        <td><div className="user-list__skeleton user-list__skeleton--text"></div></td>
       </tr>
     ));
   };
 
-  if (error) return <p>Lỗi: {error}</p>;
+  const getPageNumbers = () => {
+    const delta = 1;
+    const range = [];
+    const rangeWithDots = [];
+    const totalPages = users.totalPages || 1;
 
-  const pageNumbers = [];
-  for (let i = 1; i <= users.totalPages; i++) {
-    pageNumbers.push(i);
-  }
+    const start = Math.max(2, currentPage - delta);
+    const end = Math.min(totalPages - 1, currentPage + delta);
+
+    range.push(1);
+    for (let i = start; i <= end; i++) {
+      range.push(i);
+    }
+    if (totalPages > 1) {
+      range.push(totalPages);
+    }
+
+    let prevPage = null;
+    for (const page of range) {
+      if (prevPage && page - prevPage > 1) {
+        rangeWithDots.push('...');
+      }
+      rangeWithDots.push(page);
+      prevPage = page;
+    }
+
+    return rangeWithDots;
+  };
 
   return (
-    <div className="user-list-container">
-      <h2>Danh sách người dùng</h2>
-      <div className="user-filters">
-        <div className="user-search-bar">
+    <div className="user-list">
+      <h2 className="user-list__title">Danh sách người dùng</h2>
+      <div className="user-list__filters">
+        <div className="user-list__search-bar">
           <input
-            ref={inputRef}
+            ref={searchInputRef}
             type="text"
             lang="vi"
             name="email"
             placeholder="Tìm kiếm theo email..."
             value={filters.email}
             onChange={handleFilterChange}
+            className="user-list__search-input"
           />
         </div>
-        <select name="isActive" value={filters.isActive} onChange={handleFilterChange}>
+        <select
+          name="isActive"
+          value={filters.isActive}
+          onChange={handleFilterChange}
+          className="user-list__select"
+        >
           <option value={2}>Tất cả (Active)</option>
           <option value={1}>Active</option>
           <option value={0}>Inactive</option>
         </select>
-        <select name="isVerified" value={filters.isVerified} onChange={handleFilterChange}>
+        <select
+          name="isVerified"
+          value={filters.isVerified}
+          onChange={handleFilterChange}
+          className="user-list__select"
+        >
           <option value={2}>Tất cả (Verified)</option>
           <option value={1}>Verified</option>
           <option value={0}>Unverified</option>
         </select>
       </div>
-      <table className="user-table">
+      <table className="user-list__table">
         <thead>
           <tr>
             <th>Họ và tên</th>
@@ -149,81 +208,103 @@ const UserList = () => {
         <tbody>
           {loading ? (
             renderSkeleton()
+          ) : error ? (
+            <tr><td colSpan="9" className="user-list__empty">Lỗi: {error}</td></tr>
           ) : users.content && users.content.length > 0 ? (
             users.content.map((user) => (
-              <tr key={user.userId}>
+              <tr key={user.userId} className="user-list__table-row">
                 <td>{user.fullName}</td>
                 <td>{user.email}</td>
                 <td>{user.phoneNumber || 'Chưa cập nhật'}</td>
                 <td>{formatDate(user.dateOfBirth)}</td>
                 <td>{user.gender === 'MALE' ? 'Nam' : user.gender === 'FEMALE' ? 'Nữ' : 'Khác'}</td>
-                <td className={user.active ? 'active-true' : 'active-false'}>
+                <td className={user.active ? 'user-list__status--active-yes' : 'user-list__status--active-no'}>
                   {user.active ? 'YES' : 'NO'}
                 </td>
-                <td className={user.verified ? 'verified-true' : 'verified-false'}>
+                <td className={user.verified ? 'user-list__status--verified-yes' : 'user-list__status--verified-no'}>
                   {user.verified ? 'YES' : 'NO'}
                 </td>
                 <td>{user.role || 'Chưa xác định'}</td>
                 <td>
-                  <button onClick={() => setEditUser({ ...user })}>Chỉnh sửa trạng thái</button>
+                  <button
+                    className="user-list__action-button user-list__action-button--edit"
+                    onClick={() => setEditUser({ ...user })}
+                  >
+                    Chỉnh sửa trạng thái
+                  </button>
                 </td>
               </tr>
             ))
           ) : (
-            <tr><td colSpan="9">Không có người dùng nào</td></tr>
+            <tr><td colSpan="9" className="user-list__empty">Không có người dùng nào</td></tr>
           )}
         </tbody>
       </table>
-      <div className="user-pagination">
-        <button onClick={handlePreviousPage} disabled={currentPage === 1 || loading}>
+      <div className="user-list__pagination">
+        <button
+          className="user-list__pagination-button"
+          onClick={handlePreviousPage}
+          disabled={currentPage === 1 || loading}
+        >
           Trang trước
         </button>
-        {pageNumbers.map((number) => (
-          <button
-            key={number}
-            onClick={() => handlePageClick(number)}
-            className={currentPage === number ? 'active' : ''}
-            disabled={loading}
-          >
-            {number}
-          </button>
-        ))}
-        <button onClick={handleNextPage} disabled={currentPage === users.totalPages || loading}>
+        {getPageNumbers().map((page, index) =>
+          page === '...' ? (
+            <span key={`ellipsis-${index}`} className="user-list__pagination-ellipsis">
+              ...
+            </span>
+          ) : (
+            <button
+              key={page}
+              className={`user-list__pagination-button ${currentPage === page ? 'user-list__pagination-button--active' : ''}`}
+              onClick={() => handlePageClick(page)}
+              disabled={loading}
+            >
+              {page}
+            </button>
+          )
+        )}
+        <button
+          className="user-list__pagination-button"
+          onClick={handleNextPage}
+          disabled={currentPage === users.totalPages || loading}
+        >
           Trang sau
         </button>
       </div>
       {editUser && (
-        <div className="user-modal" onClick={() => setEditUser(null)}>
-          <div className="user-modal-content" onClick={(e) => e.stopPropagation()}>
-            <span className="close-modal" onClick={() => setEditUser(null)}>
-              ×
-            </span>
-            <h3>Chỉnh sửa trạng thái người dùng: {editUser.fullName}</h3>
-            <div className="form-group">
-              <label>Trạng thái hoạt động</label>
+        <div className="user-list__modal" onClick={() => setEditUser(null)}>
+          <div className="user-list__modal-content" onClick={(e) => e.stopPropagation()}>
+            <span className="user-list__modal-close" onClick={() => setEditUser(null)}>×</span>
+            <h3 className="user-list__modal-title">Chỉnh sửa trạng thái người dùng: {editUser.fullName}</h3>
+            <div className="user-list__form-group">
+              <label className="user-list__label">Trạng thái hoạt động</label>
               <select
                 value={editUser.active ? 1 : 0}
                 onChange={(e) => setEditUser({ ...editUser, active: e.target.value === '1' })}
+                className="user-list__select"
               >
                 <option value={1}>Active</option>
                 <option value={0}>Inactive</option>
               </select>
             </div>
-            <div className="form-group">
-              <label>Trạng thái xác minh</label>
+            <div className="user-list__form-group">
+              <label className="user-list__label">Trạng thái xác minh</label>
               <select
                 value={editUser.verified ? 1 : 0}
                 onChange={(e) => setEditUser({ ...editUser, verified: e.target.value === '1' })}
+                className="user-list__select"
               >
                 <option value={1}>Verified</option>
                 <option value={0}>Unverified</option>
               </select>
             </div>
-            <div className="form-group">
-              <label>Vai trò</label>
+            <div className="user-list__form-group">
+              <label className="user-list__label">Vai trò</label>
               <select
-                value={editUser.role || 'USER'} // Giá trị mặc định là 'USER' nếu role chưa có
+                value={editUser.role || 'USER'}
                 onChange={(e) => setEditUser({ ...editUser, role: e.target.value })}
+                className="user-list__select"
               >
                 <option value="ADMIN">Admin</option>
                 <option value="USER">User</option>
@@ -231,8 +312,15 @@ const UserList = () => {
                 <option value="SHIPPER">Shipper</option>
               </select>
             </div>
-            <button onClick={handleSaveEdit}>Lưu</button>
-            <button onClick={() => setEditUser(null)}>Hủy</button>
+            <div className="user-list__form-actions">
+              <button className="user-list__modal-button" onClick={handleSaveEdit}>Lưu</button>
+              <button
+                className="user-list__modal-button user-list__modal-button--cancel"
+                onClick={() => setEditUser(null)}
+              >
+                Hủy
+              </button>
+            </div>
           </div>
         </div>
       )}
