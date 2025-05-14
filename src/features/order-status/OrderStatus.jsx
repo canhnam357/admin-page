@@ -3,6 +3,34 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchOrderStatuses, fetchUserById, clearSelectedUser } from './orderStatusSlice';
 import './OrderStatus.css';
 
+// Object ánh xạ trạng thái sang tiếng Việt
+const statusLabels = {
+  PENDING: 'Chờ duyệt',
+  REJECTED: 'Bị từ chối',
+  IN_PREPARATION: 'Đang chuẩn bị hàng',
+  READY_TO_SHIP: 'Chuẩn bị giao',
+  DELIVERING: 'Đang giao',
+  DELIVERED: 'Đã giao',
+  CANCELLED: 'Đã huỷ',
+  FAILED_DELIVERY: 'Giao thất bại',
+  RETURNED: 'Đã hoàn hàng',
+};
+
+// Object ánh xạ giới tính sang tiếng Việt
+const genderLabels = {
+  MALE: 'Nam',
+  FEMALE: 'Nữ',
+  OTHER: 'Khác',
+};
+
+// Object ánh xạ vai trò sang tiếng Việt
+const roleLabels = {
+  ADMIN: 'Quản trị viên',
+  EMPLOYEE: 'Nhân viên',
+  SHIPPER: 'Nhân viên giao hàng',
+  USER: 'Người dùng',
+};
+
 const OrderStatus = () => {
   const dispatch = useDispatch();
   const { orderStatuses, selectedUser, loading } = useSelector((state) => state.orderStatuses);
@@ -12,7 +40,7 @@ const OrderStatus = () => {
 
   useEffect(() => {
     dispatch(fetchOrderStatuses({ index: currentPage, size, orderId }));
-  }, [dispatch, currentPage, orderId, size]); // Thêm 'size' vào dependency array
+  }, [dispatch, currentPage, orderId, size]);
 
   const handleNextPage = () => {
     if (currentPage < orderStatuses.totalPages) {
@@ -52,9 +80,44 @@ const OrderStatus = () => {
         <td><div className="order-status__skeleton order-status__skeleton--text"></div></td>
         <td><div className="order-status__skeleton order-status__skeleton--text"></div></td>
         <td><div className="order-status__skeleton order-status__skeleton--text"></div></td>
-        <td><div className="order-status__skeleton order-status__skeleton--text"></div></td>
       </tr>
     ));
+  };
+
+  // Hàm tạo danh sách trang với dấu chấm lửng
+  const getPageNumbers = () => {
+    const delta = 1; // Số trang hiển thị trước/sau trang hiện tại
+    const range = [];
+    const rangeWithDots = [];
+
+    // Tính toán khoảng trang hiển thị
+    const start = Math.max(2, currentPage - delta);
+    const end = Math.min(orderStatuses.totalPages - 1, currentPage + delta);
+
+    // Thêm trang đầu
+    range.push(1);
+
+    // Thêm các trang từ start đến end
+    for (let i = start; i <= end; i++) {
+      range.push(i);
+    }
+
+    // Thêm trang cuối nếu totalPages > 1
+    if (orderStatuses.totalPages > 1) {
+      range.push(orderStatuses.totalPages);
+    }
+
+    // Thêm dấu chấm lửng
+    let prevPage = null;
+    for (const page of range) {
+      if (prevPage && page - prevPage > 1) {
+        rangeWithDots.push('...');
+      }
+      rangeWithDots.push(page);
+      prevPage = page;
+    }
+
+    return rangeWithDots;
   };
 
   return (
@@ -75,12 +138,11 @@ const OrderStatus = () => {
       <table className="order-status__table">
         <thead>
           <tr>
-            <th>ID</th>
             <th>Order ID</th>
-            <th>From Status</th>
-            <th>To Status</th>
-            <th>Change By</th>
-            <th>Change At</th>
+            <th>Trạng thái trước</th>
+            <th>Trạng thái hiện tại</th>
+            <th>Người thay đổi</th>
+            <th>Thời gian thay đổi</th>
           </tr>
         </thead>
         <tbody>
@@ -89,23 +151,30 @@ const OrderStatus = () => {
           ) : orderStatuses.content && orderStatuses.content.length > 0 ? (
             orderStatuses.content.map((status) => (
               <tr key={status.id} className="order-status__table-row">
-                <td>{status.id}</td>
                 <td>{status.orderId}</td>
-                <td>{status.fromStatus}</td>
-                <td>{status.toStatus}</td>
+                <td>
+                  <span className={`order-status__status order-status__status--${status.fromStatus}`}>
+                    {statusLabels[status.fromStatus] || status.fromStatus}
+                  </span>
+                </td>
+                <td>
+                  <span className={`order-status__status order-status__status--${status.toStatus}`}>
+                    {statusLabels[status.toStatus] || status.toStatus}
+                  </span>
+                </td>
                 <td>
                   <button
                     className="order-status__action-button"
                     onClick={() => handleViewUser(status.changeBy)}
                   >
-                    {status.changeBy}
+                    Xem chi tiết
                   </button>
                 </td>
                 <td>{new Date(status.changeAt).toLocaleString('vi-VN')}</td>
               </tr>
             ))
           ) : (
-            <tr><td colSpan="6" className="order-status__empty">Không có dữ liệu</td></tr>
+            <tr><td colSpan="5" className="order-status__empty">Không có dữ liệu</td></tr>
           )}
         </tbody>
       </table>
@@ -117,16 +186,22 @@ const OrderStatus = () => {
         >
           Trang trước
         </button>
-        {Array.from({ length: orderStatuses.totalPages }, (_, i) => i + 1).map((number) => (
-          <button
-            key={number}
-            className={`order-status__pagination-button ${currentPage === number ? 'order-status__pagination-button--active' : ''}`}
-            onClick={() => handlePageClick(number)}
-            disabled={loading}
-          >
-            {number}
-          </button>
-        ))}
+        {getPageNumbers().map((page, index) =>
+          page === '...' ? (
+            <span key={`ellipsis-${index}`} className="order-status__pagination-ellipsis">
+              ...
+            </span>
+          ) : (
+            <button
+              key={page}
+              className={`order-status__pagination-button ${currentPage === page ? 'order-status__pagination-button--active' : ''}`}
+              onClick={() => handlePageClick(page)}
+              disabled={loading}
+            >
+              {page}
+            </button>
+          )
+        )}
         <button
           className="order-status__pagination-button"
           onClick={handleNextPage}
@@ -157,16 +232,28 @@ const OrderStatus = () => {
                 <strong>Ngày sinh:</strong> {new Date(selectedUser.dateOfBirth).toLocaleDateString('vi-VN')}
               </div>
               <div className="order-status__detail-item">
-                <strong>Giới tính:</strong> {selectedUser.gender === 'MALE' ? 'Nam' : 'Nữ'}
+                <strong>Giới tính:</strong>
+                <span className={`order-status__gender order-status__gender--${selectedUser.gender}`}>
+                  {genderLabels[selectedUser.gender] || selectedUser.gender}
+                </span>
               </div>
               <div className="order-status__detail-item">
-                <strong>Vai trò:</strong> {selectedUser.role}
+                <strong>Vai trò:</strong>
+                <span className={`order-status__role order-status__role--${selectedUser.role}`}>
+                  {roleLabels[selectedUser.role] || selectedUser.role}
+                </span>
               </div>
               <div className="order-status__detail-item">
-                <strong>Hoạt động:</strong> {selectedUser.active ? 'Có' : 'Không'}
+                <strong>Hoạt động:</strong>
+                <span className={`order-status__boolean order-status__boolean--${selectedUser.active}`}>
+                  {selectedUser.active ? 'YES' : 'NO'}
+                </span>
               </div>
               <div className="order-status__detail-item">
-                <strong>Xác minh:</strong> {selectedUser.verified ? 'Có' : 'Không'}
+                <strong>Xác minh:</strong>
+                <span className={`order-status__boolean order-status__boolean--${selectedUser.verified}`}>
+                  {selectedUser.verified ? 'YES' : 'NO'}
+                </span>
               </div>
             </div>
           </div>
