@@ -24,21 +24,27 @@ const DistributorList = () => {
 
     if (!loading && !error) {
       if (action === 'fetch') {
+        toast.dismiss();
         toast.success('Lấy danh sách nhà phát hành thành công!');
         setToastShown(true);
       } else if (action === 'create') {
+        toast.dismiss();
         toast.success('Tạo nhà phát hành thành công!');
         setToastShown(true);
       } else if (action === 'update') {
+        toast.dismiss();
         toast.success('Sửa nhà phát hành thành công!');
         setToastShown(true);
       }
     } else if (error) {
       if (action === 'fetch') {
+        toast.dismiss();
         toast.error(`Lấy danh sách nhà phát hành thất bại: ${error}`);
       } else if (action === 'create') {
+        toast.dismiss();
         toast.error(`Tạo nhà phát hành thất bại: ${error}`);
       } else if (action === 'update') {
+        toast.dismiss();
         toast.error(`Sửa nhà phát hành thất bại: ${error}`);
       }
     }
@@ -87,10 +93,12 @@ const DistributorList = () => {
 
   const validateDistributorName = (name) => {
     if (!name.trim()) {
+      toast.dismiss();
       toast.error('Tên nhà phát hành không được rỗng');
       return false;
     }
     if (name.trim().length < 2) {
+      toast.dismiss();
       toast.error('Tên nhà phát hành phải có ít nhất 2 ký tự');
       return false;
     }

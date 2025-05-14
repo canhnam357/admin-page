@@ -11,8 +11,10 @@ configureApiInterceptors(store);
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
-  <React.StrictMode>
-    <App />
+  <>
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
     <ToastContainer
       position="top-right"
       autoClose={3000}
@@ -24,7 +26,7 @@ root.render(
       draggable
       pauseOnHover
       className="custom-toast-container"
-      style={{ zIndex: 10000 }}
+      style={{ zIndex: 99999 }} // Tăng z-index để đảm bảo không bị che
     />
-  </React.StrictMode>
+  </>
 );

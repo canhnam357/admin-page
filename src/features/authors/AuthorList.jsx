@@ -32,11 +32,13 @@ const AuthorList = () => {
           });
           setAuthorBooks(response.data.result || { content: [], totalPages: 0, totalElements: 0 });
           if (!toastShown) {
+            toast.dismiss();
             toast.success('Lấy danh sách sách thành công!');
             setToastShown(true);
           }
         } catch (err) {
           setAuthorBooks({ content: [], totalPages: 0, totalElements: 0 });
+          toast.dismiss();
           toast.error(`Lấy danh sách sách thất bại: ${err.response?.data?.message || err.message}`);
         }
       }
@@ -55,21 +57,27 @@ const AuthorList = () => {
 
     if (!loading && !error) {
       if (action === 'fetch') {
+        toast.dismiss();
         toast.success('Lấy danh sách tác giả thành công!');
         setToastShown(true);
       } else if (action === 'create') {
+        toast.dismiss();
         toast.success('Tạo tác giả thành công!');
         setToastShown(true);
       } else if (action === 'update') {
+        toast.dismiss();
         toast.success('Sửa tác giả thành công!');
         setToastShown(true);
       }
     } else if (error) {
       if (action === 'fetch') {
+        toast.dismiss();
         toast.error(`Lấy danh sách tác giả thất bại: ${error}`);
       } else if (action === 'create') {
+        toast.dismiss();
         toast.error(`Tạo tác giả thất bại: ${error}`);
       } else if (action === 'update') {
+        toast.dismiss();
         toast.error(`Sửa tác giả thất bại: ${error}`);
       }
     }
@@ -118,10 +126,12 @@ const AuthorList = () => {
 
   const validateAuthorName = (name) => {
     if (!name.trim()) {
+      toast.dismiss();
       toast.error('Tên tác giả không được rỗng');
       return false;
     }
     if (name.trim().length < 2) {
+      toast.dismiss();
       toast.error('Tên tác giả phải có ít nhất 2 ký tự');
       return false;
     }

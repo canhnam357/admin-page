@@ -63,21 +63,27 @@ const BookList = () => {
 
     if (!loading && !error) {
       if (action === 'fetch') {
+        toast.dismiss();
         toast.success('Lấy danh sách sách thành công!');
         setToastShown(true);
       } else if (action === 'create') {
+        toast.dismiss();
         toast.success('Tạo sách thành công!');
         setToastShown(true);
       } else if (action === 'update') {
+        toast.dismiss();
         toast.success('Sửa sách thành công!');
         setToastShown(true);
       }
     } else if (error) {
       if (action === 'fetch') {
+        toast.dismiss();
         toast.error(`Lấy danh sách sách thất bại: ${error}`);
       } else if (action === 'create') {
+        toast.dismiss();
         toast.error(`Tạo sách thất bại: ${error}`);
       } else if (action === 'update') {
+        toast.dismiss();
         toast.error(`Sửa sách thất bại: ${error}`);
       }
     }
@@ -138,58 +144,72 @@ const BookList = () => {
     } = form;
 
     if (!bookName.trim()) {
+      toast.dismiss();
       toast.error('Tên sách không được rỗng');
       return false;
     }
     if (bookName.trim().length < 2) {
+      toast.dismiss();
       toast.error('Tên sách phải có ít nhất 2 ký tự');
       return false;
     }
     if (!isEdit && inStock === '') {
+      toast.dismiss();
       toast.error('Số lượng không được rỗng');
       return false;
     }
     if (parseInt(inStock) < 0) {
+      toast.dismiss();
       toast.error('Số lượng phải lớn hơn hoặc bằng 0');
       return false;
     }
     if (!isEdit && price === '') {
+      toast.dismiss();
       toast.error('Giá không được rỗng');
       return false;
     }
     if (parseFloat(price) <= 0) {
+      toast.dismiss();
       toast.error('Giá phải lớn hơn 0');
       return false;
     }
     if (!isEdit && numberOfPage === '') {
+      toast.dismiss();
       toast.error('Số trang không được rỗng');
       return false;
     }
     if (parseInt(numberOfPage) <= 0) {
+      toast.dismiss();
       toast.error('Số trang phải lớn hơn 0');
       return false;
     }
     if (!isEdit && weight === '') {
+      toast.dismiss();
       toast.error('Cân nặng không được rỗng');
       return false;
     }
     if (parseFloat(weight) <= 0) {
+      toast.dismiss();
       toast.error('Cân nặng phải lớn hơn 0');
       return false;
     }
     if (!authorId) {
+      toast.dismiss();
       toast.error('Vui lòng chọn tác giả');
       return false;
     }
     if (!publisherId) {
+      toast.dismiss();
       toast.error('Vui lòng chọn nhà xuất bản');
       return false;
     }
     if (!distributorId) {
+      toast.dismiss();
       toast.error('Vui lòng chọn nhà phân phối');
       return false;
     }
     if (!bookTypeId) {
+      toast.dismiss();
       toast.error('Vui lòng chọn loại sách');
       return false;
     }
@@ -453,14 +473,17 @@ const BookList = () => {
     try {
       const { bookId, discountId, startDate, endDate, discountType, discount } = discountForm;
       if (!discount) {
+        toast.dismiss();
         toast.error('Giá trị khuyến mãi không được rỗng');
         return;
       }
       if (discountType === 'PERCENTAGE' && (parseFloat(discount) <= 0 || parseFloat(discount) >= 100)) {
+        toast.dismiss();
         toast.error('Giá trị khuyến mãi phần trăm phải từ 0 đến 99');
         return;
       }
       if (new Date(startDate) > new Date(endDate)) {
+        toast.dismiss();
         toast.error('Ngày bắt đầu phải trước ngày kết thúc');
         return;
       }
@@ -478,9 +501,11 @@ const BookList = () => {
         await api.post('/admin/discounts', { ...payload, bookId });
       }
       setDiscountForm(null);
+      toast.dismiss();
       toast.success('Cập nhật khuyến mãi thành công!');
       dispatch(fetchBooks({ index: currentPage, size, keyword }));
     } catch (err) {
+      toast.dismiss();
       toast.error(err?.response?.data?.message || 'Cập nhật khuyến mãi thất bại');
     }
   };

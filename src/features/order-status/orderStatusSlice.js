@@ -67,12 +67,14 @@ const orderStatusSlice = createSlice({
         state.loading = false;
         state.orderStatuses = action.payload;
         state.notification = { type: 'success', message: 'Lấy danh sách trạng thái đơn hàng thành công' };
+        toast.dismiss();
         toast.success('Lấy danh sách trạng thái đơn hàng thành công');
       })
       .addCase(fetchOrderStatuses.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
         state.notification = { type: 'error', message: action.payload };
+        toast.dismiss();
         toast.error(action.payload);
       })
       .addCase(fetchUserById.pending, (state) => {
@@ -84,12 +86,14 @@ const orderStatusSlice = createSlice({
         state.loading = false;
         state.selectedUser = action.payload;
         state.notification = { type: 'success', message: 'Lấy thông tin người dùng thành công' };
+        toast.dismiss();
         toast.success('Lấy thông tin người dùng thành công');
       })
       .addCase(fetchUserById.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
         state.notification = { type: 'error', message: action.payload };
+        toast.dismiss();
         toast.error(action.payload);
       });
   },

@@ -20,21 +20,27 @@ const BookTypeList = () => {
 
     if (!loading && !error) {
       if (action === 'fetch') {
+        toast.dismiss();
         toast.success('Lấy danh sách loại sách thành công!');
         setToastShown(true);
       } else if (action === 'create') {
+        toast.dismiss();
         toast.success('Tạo loại sách thành công!');
         setToastShown(true);
       } else if (action === 'update') {
+        toast.dismiss();
         toast.success('Sửa loại sách thành công!');
         setToastShown(true);
       }
     } else if (error) {
       if (action === 'fetch') {
+        toast.dismiss();
         toast.error(`Lấy danh sách loại sách thất bại: ${error}`);
       } else if (action === 'create') {
+        toast.dismiss();
         toast.error(`Tạo loại sách thất bại: ${error}`);
       } else if (action === 'update') {
+        toast.dismiss();
         toast.error(`Sửa loại sách thất bại: ${error}`);
       }
     }
@@ -46,10 +52,12 @@ const BookTypeList = () => {
 
   const validateBookTypeName = (name) => {
     if (!name.trim()) {
+      toast.dismiss();
       toast.error('Tên loại sách không được rỗng');
       return false;
     }
     if (name.trim().length < 2) {
+      toast.dismiss();
       toast.error('Tên loại sách phải có ít nhất 2 ký tự');
       return false;
     }

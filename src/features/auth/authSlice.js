@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../../api/api';
+import { toast } from 'react-toastify';
 
 export const loginUser = createAsyncThunk(
   'auth/loginUser',
@@ -32,6 +33,8 @@ export const logoutUser = createAsyncThunk(
       if (response.status === 200) {
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
+        toast.dismiss();
+        toast.success("Đăng xuất thành công!");
         return true;
       }
       throw new Error('Đăng xuất thất bại!');

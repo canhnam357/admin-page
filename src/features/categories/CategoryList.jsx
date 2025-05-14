@@ -22,21 +22,27 @@ const CategoryList = () => {
 
     if (!loading && !error) {
       if (action === 'fetch') {
+        toast.dismiss();
         toast.success('Lấy danh sách thể loại thành công!');
         setToastShown(true);
       } else if (action === 'create') {
+        toast.dismiss();
         toast.success('Tạo thể loại thành công!');
         setToastShown(true);
       } else if (action === 'update') {
+        toast.dismiss();
         toast.success('Sửa thể loại thành công!');
         setToastShown(true);
       }
     } else if (error) {
       if (action === 'fetch') {
+        toast.dismiss();
         toast.error(`Lấy danh sách thể loại thất bại: ${error}`);
       } else if (action === 'create') {
+        toast.dismiss();
         toast.error(`Tạo thể loại thất bại: ${error}`);
       } else if (action === 'update') {
+        toast.dismiss();
         toast.error(`Sửa thể loại thất bại: ${error}`);
       }
     }
@@ -68,10 +74,12 @@ const CategoryList = () => {
 
   const validateCategoryName = (name) => {
     if (!name.trim()) {
+      toast.dismiss();
       toast.error('Tên thể loại không được rỗng');
       return false;
     }
     if (name.trim().length < 2) {
+      toast.dismiss();
       toast.error('Tên thể loại phải có ít nhất 2 ký tự');
       return false;
     }

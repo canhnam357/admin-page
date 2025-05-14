@@ -10,6 +10,8 @@ export const fetchBooks = createAsyncThunk(
       const response = await api.get('/admin/books', {
         params: { index, size, keyword },
       });
+      toast.dismiss();
+      toast.success("Lấy danh sách sách thành công!");
       return response.data.result;
     } catch (error) {
       if (error.response?.status === 401) {

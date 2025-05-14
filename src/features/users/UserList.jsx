@@ -10,8 +10,8 @@ const UserList = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState({ email: '', isActive: 2, isVerified: 2 });
   const [editUser, setEditUser] = useState(null);
-  const [toastShown, setToastShown] = useState(false);
   const searchInputRef = useRef(null);
+  const prevLoadingRef = useRef(loading); // Lưu trạng thái loading trước đó
   const size = 10;
 
   useEffect(() => {
@@ -19,28 +19,31 @@ const UserList = () => {
   }, [dispatch, currentPage, filters]);
 
   useEffect(() => {
-    if (toastShown) return;
-
-    if (!loading && !error) {
-      if (action === 'fetch') {
-        toast.success('Lấy danh sách người dùng thành công!');
-        setToastShown(true);
-      } else if (action === 'update') {
-        toast.success('Cập nhật trạng thái người dùng thành công!');
-        setToastShown(true);
-      }
-    } else if (error) {
-      if (action === 'fetch') {
-        toast.error(`Lấy danh sách người dùng thất bại: ${error}`);
-      } else if (action === 'update') {
-        toast.error(`Cập nhật trạng thái thất bại: ${error}`);
+    console.log('useEffect triggered - loading:', loading, 'error:', error, 'action:', action); // Debug
+    // Kiểm tra khi loading thay đổi hoặc action tồn tại
+    if (prevLoadingRef.current && !loading && action) {
+      toast.dismiss();
+      if (!error) {
+        if (action === 'fetch') {
+          toast.success('Lấy danh sách người dùng thành công!');
+        } else if (action === 'update') {
+          toast.success('Cập nhật trạng thái người dùng thành công!');
+        }
+      } else {
+        if (action === 'fetch') {
+          toast.error(`Lấy danh sách người dùng thất bại: ${error}`);
+        } else if (action === 'update') {
+          toast.error(`Cập nhật trạng thái thất bại: ${error}`);
+        }
       }
     }
+
+    prevLoadingRef.current = loading;
 
     return () => {
       dispatch(resetUserState());
     };
-  }, [loading, error, action, dispatch, toastShown]);
+  }, [loading, error, action, dispatch]);
 
   const handleNextPage = () => {
     if (currentPage < users.totalPages) {
@@ -94,12 +97,13 @@ const UserList = () => {
           role: editUser.role
         })).unwrap();
         setEditUser(null);
-        setToastShown(false);
         dispatch(fetchUsers({ index: currentPage, size, ...filters }));
       } catch (err) {
+        toast.dismiss();
         toast.error(`Cập nhật trạng thái thất bại: ${err}`);
       }
     } else {
+      toast.dismiss();
       toast.error('Thiếu thông tin trạng thái active, verified hoặc role');
     }
   };

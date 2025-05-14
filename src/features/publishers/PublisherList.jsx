@@ -24,21 +24,27 @@ const PublisherList = () => {
 
     if (!loading && !error) {
       if (action === 'fetch') {
+        toast.dismiss();
         toast.success('Lấy danh sách nhà xuất bản thành công!');
         setToastShown(true);
       } else if (action === 'create') {
+        toast.dismiss();
         toast.success('Tạo nhà xuất bản thành công!');
         setToastShown(true);
       } else if (action === 'update') {
+        toast.dismiss();
         toast.success('Sửa nhà xuất bản thành công!');
         setToastShown(true);
       }
     } else if (error) {
       if (action === 'fetch') {
+        toast.dismiss();
         toast.error(`Lấy danh sách nhà xuất bản thất bại: ${error}`);
       } else if (action === 'create') {
+        toast.dismiss();
         toast.error(`Tạo nhà xuất bản thất bại: ${error}`);
       } else if (action === 'update') {
+        toast.dismiss();
         toast.error(`Sửa nhà xuất bản thất bại: ${error}`);
       }
     }
@@ -87,10 +93,12 @@ const PublisherList = () => {
 
   const validatePublisherName = (name) => {
     if (!name.trim()) {
+      toast.dismiss();
       toast.error('Tên nhà xuất bản không được rỗng');
       return false;
     }
     if (name.trim().length < 2) {
+      toast.dismiss();
       toast.error('Tên nhà xuất bản phải có ít nhất 2 ký tự');
       return false;
     }

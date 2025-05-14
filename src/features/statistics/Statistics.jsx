@@ -24,8 +24,10 @@ import React, { useEffect, useState } from 'react';
              dispatch(fetchNewUsersCount(selectedYear)).unwrap(),
              dispatch(fetchOrdersByStatus()).unwrap(),
            ]);
+           toast.dismiss();
            toast.success('Lấy dữ liệu thống kê thành công!');
          } catch (err) {
+          toast.dismiss();
            toast.error('Lấy dữ liệu thống kê thất bại!');
          }
        };
