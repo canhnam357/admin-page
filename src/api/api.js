@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: "https://api.erotskoob.xyz/api",
+  baseURL: process.env.REACT_APP_API_URL_BASE,
 });
 
 // Hàm để cấu hình interceptor với store (chỉ thêm token vào header)
