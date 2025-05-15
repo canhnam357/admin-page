@@ -1,7 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { toast } from 'react-toastify';
 import api from '../../api/api';
-import { logoutUser } from '../auth/authSlice'; // Import logoutUser để dispatch
+import { logoutUser } from '../auth/authSlice';
 
 export const fetchBooks = createAsyncThunk(
   'books/fetchBooks',
@@ -10,16 +9,12 @@ export const fetchBooks = createAsyncThunk(
       const response = await api.get('/admin/books', {
         params: { index, size, keyword },
       });
-      toast.dismiss();
-      toast.success("Lấy danh sách sách thành công!");
       return response.data.result;
     } catch (error) {
       if (error.response?.status === 401) {
-        dispatch(logoutUser()); // Dispatch logoutUser khi gặp 401
+        dispatch(logoutUser());
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
-        toast.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
-        window.location.href = '/login';
         return rejectWithValue('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
       }
       return rejectWithValue(error.response?.data?.message || 'Lỗi khi lấy danh sách sách');
@@ -38,8 +33,6 @@ export const createBook = createAsyncThunk(
         dispatch(logoutUser());
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
-        toast.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
-        window.location.href = '/login';
         return rejectWithValue('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
       }
       if (error.response?.status === 422) {
@@ -79,8 +72,6 @@ export const updateBook = createAsyncThunk(
         dispatch(logoutUser());
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
-        toast.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
-        window.location.href = '/login';
         return rejectWithValue('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
       }
       if (error.response?.status === 404) {
@@ -115,16 +106,14 @@ export const updateBook = createAsyncThunk(
 const bookSlice = createSlice({
   name: 'books',
   initialState: {
-    books: [],
+    books: { content: [], totalPages: 0, totalElements: 0 },
     loading: false,
     error: null,
-    notification: null,
   },
   reducers: {
     resetBookState: (state) => {
       state.loading = false;
       state.error = null;
-      state.notification = null;
     },
   },
   extraReducers: (builder) => {
@@ -133,49 +122,52 @@ const bookSlice = createSlice({
       .addCase(fetchBooks.pending, (state) => {
         state.loading = true;
         state.error = null;
-        state.notification = null;
+        console.log('fetchBooks pending'); // Debug
       })
       .addCase(fetchBooks.fulfilled, (state, action) => {
         state.loading = false;
         state.books = action.payload;
+        console.log('fetchBooks fulfilled - books:', state.books); // Debug
       })
       .addCase(fetchBooks.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        state.books = [];
-        toast.error(action.payload);
+        state.books = { content: [], totalPages: 0, totalElements: 0 };
+        console.log('fetchBooks rejected - error:', state.error); // Debug
       })
       // Create Book
       .addCase(createBook.pending, (state) => {
         state.loading = true;
         state.error = null;
-        state.notification = null;
+        console.log('createBook pending'); // Debug
       })
-      .addCase(createBook.fulfilled, (state) => {
+      .addCase(createBook.fulfilled, (state, action) => {
         state.loading = false;
-        state.notification = { type: 'success', message: 'Tạo sách thành công' };
-        toast.success('Tạo sách thành công');
+        state.books.content.push(action.payload); // Thêm sách mới vào state
+        state.books.totalElements += 1; // Tăng tổng số phần tử
+        console.log('createBook fulfilled - payload:', action.payload); // Debug
       })
       .addCase(createBook.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        toast.error(action.payload);
+        console.log('createBook rejected - error:', state.error); // Debug
       })
       // Update Book
       .addCase(updateBook.pending, (state) => {
         state.loading = true;
         state.error = null;
-        state.notification = null;
+        console.log('updateBook pending'); // Debug
       })
-      .addCase(updateBook.fulfilled, (state) => {
+      .addCase(updateBook.fulfilled, (state, action) => {
         state.loading = false;
-        state.notification = { type: 'success', message: 'Cập nhật sách thành công' };
-        toast.success('Cập nhật sách thành công');
+        const index = state.books.content.findIndex((book) => book.bookId === action.payload.bookId);
+        if (index !== -1) state.books.content[index] = action.payload; // Cập nhật sách trong state
+        console.log('updateBook fulfilled - payload:', action.payload); // Debug
       })
       .addCase(updateBook.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        toast.error(action.payload);
+        console.log('updateBook rejected - error:', state.error); // Debug
       });
   },
 });

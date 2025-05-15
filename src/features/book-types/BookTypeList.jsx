@@ -1,54 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
-import { fetchBookTypes, createBookType, updateBookType, resetBookTypeState } from './bookTypeSlice';
+import { fetchBookTypes, createBookType, updateBookType } from './bookTypeSlice';
 import './BookTypeList.css';
 
 const BookTypeList = () => {
   const dispatch = useDispatch();
-  const { bookTypes, loading, error, action } = useSelector((state) => state.bookTypes);
+  const { bookTypes, loading, error } = useSelector((state) => state.bookTypes);
   const [createForm, setCreateForm] = useState({ bookTypeName: '', showModal: false });
   const [editBookType, setEditBookType] = useState(null);
-  const [toastShown, setToastShown] = useState(false);
 
   useEffect(() => {
     dispatch(fetchBookTypes());
   }, [dispatch]);
 
+  // Hiển thị toast lỗi khi fetchBookTypes thất bại (trừ lỗi 401)
   useEffect(() => {
-    if (toastShown) return;
-
-    if (!loading && !error) {
-      if (action === 'fetch') {
-        toast.dismiss();
-        toast.success('Lấy danh sách loại sách thành công!');
-        setToastShown(true);
-      } else if (action === 'create') {
-        toast.dismiss();
-        toast.success('Tạo loại sách thành công!');
-        setToastShown(true);
-      } else if (action === 'update') {
-        toast.dismiss();
-        toast.success('Sửa loại sách thành công!');
-        setToastShown(true);
-      }
-    } else if (error) {
-      if (action === 'fetch') {
-        toast.dismiss();
-        toast.error(`Lấy danh sách loại sách thất bại: ${error}`);
-      } else if (action === 'create') {
-        toast.dismiss();
-        toast.error(`Tạo loại sách thất bại: ${error}`);
-      } else if (action === 'update') {
-        toast.dismiss();
-        toast.error(`Sửa loại sách thất bại: ${error}`);
-      }
+    if (error && error !== 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!') {
+      toast.dismiss();
+      toast.error(`Lấy danh sách loại sách thất bại: ${error}`);
     }
-
-    return () => {
-      dispatch(resetBookTypeState());
-    };
-  }, [loading, error, action, dispatch, toastShown]);
+  }, [error]);
 
   const validateBookTypeName = (name) => {
     if (!name.trim()) {
@@ -64,11 +36,19 @@ const BookTypeList = () => {
     return true;
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (validateBookTypeName(createForm.bookTypeName)) {
-      dispatch(createBookType(createForm.bookTypeName));
-      setCreateForm({ bookTypeName: '', showModal: false });
-      setToastShown(false);
+      try {
+        const result = await dispatch(createBookType(createForm.bookTypeName)).unwrap();
+        console.log('createBookType result:', result); // Debug
+        setCreateForm({ bookTypeName: '', showModal: false });
+        toast.dismiss();
+        toast.success('Tạo loại sách thành công!');
+      } catch (err) {
+        console.log('createBookType error:', err); // Debug
+        toast.dismiss();
+        toast.error(`Tạo loại sách thất bại: ${err.message || err}`);
+      }
     }
   };
 
@@ -76,11 +56,22 @@ const BookTypeList = () => {
     setEditBookType({ ...bookType });
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (editBookType && validateBookTypeName(editBookType.bookTypeName)) {
-      dispatch(updateBookType({ bookTypeId: editBookType.bookTypeId, bookTypeName: editBookType.bookTypeName }));
-      setEditBookType(null);
-      setToastShown(false);
+      try {
+        const result = await dispatch(updateBookType({ bookTypeId: editBookType.bookTypeId, bookTypeName: editBookType.bookTypeName })).unwrap();
+        console.log('updateBookType result:', result); // Debug
+        setEditBookType(null);
+        toast.dismiss();
+        toast.success('Sửa loại sách thành công!');
+      } catch (err) {
+        console.log('updateBookType error:', err); // Debug
+        toast.dismiss();
+        toast.error(`Sửa loại sách thất bại: ${err.message || err}`);
+      }
+    } else {
+      toast.dismiss();
+      toast.error('Tên loại sách không hợp lệ!');
     }
   };
 

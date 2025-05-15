@@ -7,7 +7,7 @@ import './AuthorList.css';
 
 const AuthorList = () => {
   const dispatch = useDispatch();
-  const { authors, loading, error, action } = useSelector((state) => state.authors);
+  const { authors, loading, error } = useSelector((state) => state.authors);
   const [currentPage, setCurrentPage] = useState(1);
   const [keyword, setKeyword] = useState('');
   const [createForm, setCreateForm] = useState({ authorName: '', showModal: false });
@@ -15,7 +15,6 @@ const AuthorList = () => {
   const [viewAuthorId, setViewAuthorId] = useState(null);
   const [authorBooks, setAuthorBooks] = useState({ content: [], totalPages: 0, totalElements: 0 });
   const [currentBookPage, setCurrentBookPage] = useState(1);
-  const [toastShown, setToastShown] = useState(false);
   const inputRef = useRef(null);
   const size = 10;
 
@@ -31,11 +30,8 @@ const AuthorList = () => {
             params: { index: currentBookPage, size },
           });
           setAuthorBooks(response.data.result || { content: [], totalPages: 0, totalElements: 0 });
-          if (!toastShown) {
-            toast.dismiss();
-            toast.success('Lấy danh sách sách thành công!');
-            setToastShown(true);
-          }
+          toast.dismiss();
+          toast.success('Lấy danh sách sách thành công!');
         } catch (err) {
           setAuthorBooks({ content: [], totalPages: 0, totalElements: 0 });
           toast.dismiss();
@@ -44,7 +40,7 @@ const AuthorList = () => {
       }
     };
     fetchBooks();
-  }, [viewAuthorId, currentBookPage, toastShown]);
+  }, [viewAuthorId, currentBookPage]);
 
   useEffect(() => {
     if (authorBooks.totalPages > 0 && currentBookPage > authorBooks.totalPages) {
@@ -52,40 +48,13 @@ const AuthorList = () => {
     }
   }, [authorBooks.totalPages, currentBookPage]);
 
+  // Hiển thị toast lỗi khi fetchAuthors thất bại (trừ lỗi 401)
   useEffect(() => {
-    if (toastShown) return;
-
-    if (!loading && !error) {
-      if (action === 'fetch') {
-        toast.dismiss();
-        toast.success('Lấy danh sách tác giả thành công!');
-        setToastShown(true);
-      } else if (action === 'create') {
-        toast.dismiss();
-        toast.success('Tạo tác giả thành công!');
-        setToastShown(true);
-      } else if (action === 'update') {
-        toast.dismiss();
-        toast.success('Sửa tác giả thành công!');
-        setToastShown(true);
-      }
-    } else if (error) {
-      if (action === 'fetch') {
-        toast.dismiss();
-        toast.error(`Lấy danh sách tác giả thất bại: ${error}`);
-      } else if (action === 'create') {
-        toast.dismiss();
-        toast.error(`Tạo tác giả thất bại: ${error}`);
-      } else if (action === 'update') {
-        toast.dismiss();
-        toast.error(`Sửa tác giả thất bại: ${error}`);
-      }
+    if (error && error !== 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!') {
+      toast.dismiss();
+      toast.error(`Lấy danh sách tác giả thất bại: ${error}`);
     }
-
-    return () => {
-      dispatch(resetAuthorState());
-    };
-  }, [loading, error, action, dispatch, toastShown]);
+  }, [error]);
 
   const handleNextPage = () => {
     if (currentPage < authors.totalPages) {
@@ -138,11 +107,19 @@ const AuthorList = () => {
     return true;
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (validateAuthorName(createForm.authorName)) {
-      dispatch(createAuthor(createForm.authorName));
-      setCreateForm({ authorName: '', showModal: false });
-      setToastShown(false);
+      try {
+        const result = await dispatch(createAuthor(createForm.authorName)).unwrap();
+        console.log('createAuthor result:', result); // Debug
+        setCreateForm({ authorName: '', showModal: false });
+        toast.dismiss();
+        toast.success('Tạo tác giả thành công!');
+      } catch (err) {
+        console.log('createAuthor error:', err); // Debug
+        toast.dismiss();
+        toast.error(`Tạo tác giả thất bại: ${err.message || err}`);
+      }
     }
   };
 
@@ -153,14 +130,22 @@ const AuthorList = () => {
   const handleViewBooks = (authorId) => {
     setViewAuthorId(authorId);
     setCurrentBookPage(1);
-    setToastShown(false);
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (editAuthor && validateAuthorName(editAuthor.authorName)) {
-      dispatch(updateAuthor({ authorId: editAuthor.authorId, authorName: editAuthor.authorName }));
-      setEditAuthor(null);
-      setToastShown(false);
+      try {
+        await dispatch(updateAuthor({ authorId: editAuthor.authorId, authorName: editAuthor.authorName })).unwrap();
+        setEditAuthor(null);
+        toast.dismiss();
+        toast.success('Cập nhật thông tin tác giả thành công!');
+      } catch (err) {
+        toast.dismiss();
+        toast.error(`Cập nhật thông tin tác giả thất bại: ${err}`);
+      }
+    } else {
+      toast.dismiss();
+      toast.error('Tên tác giả không hợp lệ!');
     }
   };
 
@@ -178,7 +163,6 @@ const AuthorList = () => {
     const delta = 1;
     const range = [];
     const rangeWithDots = [];
-
     const start = Math.max(2, currentPage - delta);
     const end = Math.min(totalPages - 1, currentPage + delta);
 
@@ -347,7 +331,7 @@ const AuthorList = () => {
                   <th>Giá</th>
                   <th>Số trang</th>
                   <th>Nhà xuất bản</th>
-                  <th>Nhà phân phối</th>
+                  <th>Nhà phát hành</th>
                   <th>Loại sách</th>
                   <th>Thumbnail</th>
                 </tr>

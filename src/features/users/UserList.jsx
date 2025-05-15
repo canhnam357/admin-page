@@ -19,24 +19,24 @@ const UserList = () => {
   }, [dispatch, currentPage, filters]);
 
   useEffect(() => {
-    console.log('useEffect triggered - loading:', loading, 'error:', error, 'action:', action); // Debug
-    // Kiểm tra khi loading thay đổi hoặc action tồn tại
-    if (prevLoadingRef.current && !loading && action) {
-      toast.dismiss();
-      if (!error) {
-        if (action === 'fetch') {
-          toast.success('Lấy danh sách người dùng thành công!');
-        } else if (action === 'update') {
-          toast.success('Cập nhật trạng thái người dùng thành công!');
-        }
-      } else {
-        if (action === 'fetch') {
-          toast.error(`Lấy danh sách người dùng thất bại: ${error}`);
-        } else if (action === 'update') {
-          toast.error(`Cập nhật trạng thái thất bại: ${error}`);
-        }
-      }
-    }
+    // console.log('useEffect triggered - loading:', loading, 'error:', error, 'action:', action); // Debug
+    // // Kiểm tra khi loading thay đổi hoặc action tồn tại
+    // if (prevLoadingRef.current && !loading && action) {
+    //   toast.dismiss();
+    //   if (!error) {
+    //     if (action === 'fetch') {
+    //       toast.success('Lấy danh sách người dùng thành công!');
+    //     } else if (action === 'update') {
+    //       toast.success('Cập nhật trạng thái người dùng thành công!');
+    //     }
+    //   } else {
+    //     if (action === 'fetch') {
+    //       toast.error(`Lấy danh sách người dùng thất bại: ${error}`);
+    //     } else if (action === 'update') {
+    //       toast.error(`Cập nhật trạng thái thất bại: ${error}`);
+    //     }
+    //   }
+    // }
 
     prevLoadingRef.current = loading;
 
@@ -98,6 +98,8 @@ const UserList = () => {
         })).unwrap();
         setEditUser(null);
         dispatch(fetchUsers({ index: currentPage, size, ...filters }));
+        toast.dismiss();
+        toast.success("Cập nhật trạng thái thành công!");
       } catch (err) {
         toast.dismiss();
         toast.error(`Cập nhật trạng thái thất bại: ${err}`);

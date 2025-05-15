@@ -10,7 +10,6 @@ const CategoryList = () => {
   const [keyword, setKeyword] = useState('');
   const [createForm, setCreateForm] = useState({ categoryName: '', showModal: false });
   const [editCategory, setEditCategory] = useState(null);
-  const [toastShown, setToastShown] = useState(false);
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -18,39 +17,33 @@ const CategoryList = () => {
   }, [dispatch, keyword]);
 
   useEffect(() => {
-    if (toastShown) return;
-
-    if (!loading && !error) {
-      if (action === 'fetch') {
-        toast.dismiss();
-        toast.success('Lấy danh sách thể loại thành công!');
-        setToastShown(true);
-      } else if (action === 'create') {
-        toast.dismiss();
-        toast.success('Tạo thể loại thành công!');
-        setToastShown(true);
-      } else if (action === 'update') {
-        toast.dismiss();
-        toast.success('Sửa thể loại thành công!');
-        setToastShown(true);
-      }
-    } else if (error) {
-      if (action === 'fetch') {
-        toast.dismiss();
-        toast.error(`Lấy danh sách thể loại thất bại: ${error}`);
-      } else if (action === 'create') {
-        toast.dismiss();
-        toast.error(`Tạo thể loại thất bại: ${error}`);
-      } else if (action === 'update') {
-        toast.dismiss();
-        toast.error(`Sửa thể loại thất bại: ${error}`);
+    if (!loading && action) {
+      if (error) {
+        if (action === 'fetch') {
+          toast.dismiss();
+          toast.error(`Lấy danh sách thể loại thất bại: ${error}`);
+        } else if (action === 'create') {
+          toast.dismiss();
+          toast.error(`Tạo thể loại thất bại: ${error}`);
+        } else if (action === 'update') {
+          toast.dismiss();
+          toast.error(`Sửa thể loại thất bại: ${error}`);
+        }
+      } else {
+        if (action === 'create') {
+          toast.dismiss();
+          toast.success('Tạo thể loại thành công!');
+        } else if (action === 'update') {
+          toast.dismiss();
+          toast.success('Sửa thể loại thành công!');
+        }
       }
     }
 
     return () => {
       dispatch(resetCategoryState());
     };
-  }, [loading, error, action, dispatch, toastShown]);
+  }, [loading, error, action, dispatch]);
 
   const debounce = (func, delay) => {
     let timeoutId;
@@ -90,7 +83,6 @@ const CategoryList = () => {
     if (validateCategoryName(createForm.categoryName)) {
       dispatch(createCategory(createForm.categoryName));
       setCreateForm({ categoryName: '', showModal: false });
-      setToastShown(false);
     }
   };
 
@@ -102,7 +94,6 @@ const CategoryList = () => {
     if (editCategory && validateCategoryName(editCategory.categoryName)) {
       dispatch(updateCategory({ categoryId: editCategory.categoryId, categoryName: editCategory.categoryName }));
       setEditCategory(null);
-      setToastShown(false);
     }
   };
 

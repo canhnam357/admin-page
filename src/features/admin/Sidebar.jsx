@@ -38,7 +38,7 @@ const Sidebar = () => {
         </li>
         <li className="admin-sidebar__item">
           <NavLink to="/categories" className={({ isActive }) => (isActive ? 'admin-sidebar__link admin-sidebar__link--active' : 'admin-sidebar__link')}>
-            Quản lý danh mục
+            Quản lý thể loại
           </NavLink>
         </li>
         <li className="admin-sidebar__item">

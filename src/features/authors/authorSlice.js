@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../../api/api';
-import { logoutUser } from '../auth/authSlice'; // Import logoutUser
+import { logoutUser } from '../auth/authSlice';
 
 export const fetchAuthors = createAsyncThunk(
   'authors/fetchAuthors',
@@ -120,37 +120,44 @@ const authorSlice = createSlice({
         state.loading = true;
         state.error = null;
         state.action = 'fetch';
+        console.log('fetchAuthors pending - action:', state.action); // Debug
       })
       .addCase(fetchAuthors.fulfilled, (state, action) => {
         state.loading = false;
         state.authors = action.payload;
-        state.action = 'fetch';
+        state.action = null; // Reset action
+        console.log('fetchAuthors fulfilled - action:', state.action, 'authors:', state.authors); // Debug
       })
       .addCase(fetchAuthors.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        state.action = 'fetch';
+        state.action = null; // Reset action
+        console.log('fetchAuthors rejected - error:', state.error, 'action:', state.action); // Debug
       })
       .addCase(createAuthor.pending, (state) => {
         state.loading = true;
         state.error = null;
         state.action = 'create';
+        console.log('createAuthor pending - action:', state.action); // Debug
       })
       .addCase(createAuthor.fulfilled, (state, action) => {
         state.loading = false;
         state.authors.content.push(action.payload);
         state.authors.totalElements += 1;
-        state.action = 'create';
+        state.action = null; // Reset action
+        console.log('createAuthor fulfilled - action:', state.action, 'payload:', action.payload); // Debug
       })
       .addCase(createAuthor.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        state.action = 'create';
+        state.action = null; // Reset action
+        console.log('createAuthor rejected - error:', state.error, 'action:', state.action); // Debug
       })
       .addCase(updateAuthor.pending, (state) => {
         state.loading = true;
         state.error = null;
         state.action = 'update';
+        console.log('updateAuthor pending - action:', state.action); // Debug
       })
       .addCase(updateAuthor.fulfilled, (state, action) => {
         state.loading = false;
@@ -158,17 +165,20 @@ const authorSlice = createSlice({
           (author) => author.authorId === action.payload.authorId
         );
         if (index !== -1) state.authors.content[index] = action.payload;
-        state.action = 'update';
+        state.action = null; // Reset action
+        console.log('updateAuthor fulfilled - action:', state.action, 'payload:', action.payload); // Debug
       })
       .addCase(updateAuthor.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        state.action = 'update';
+        state.action = null; // Reset action
+        console.log('updateAuthor rejected - error:', state.error, 'action:', state.action); // Debug
       })
       .addCase(deleteAuthor.pending, (state) => {
         state.loading = true;
         state.error = null;
         state.action = 'delete';
+        console.log('deleteAuthor pending - action:', state.action); // Debug
       })
       .addCase(deleteAuthor.fulfilled, (state, action) => {
         state.loading = false;
@@ -176,27 +186,32 @@ const authorSlice = createSlice({
           (author) => author.authorId !== action.payload
         );
         state.authors.totalElements -= 1;
-        state.action = 'delete';
+        state.action = null; // Reset action
+        console.log('deleteAuthor fulfilled - action:', state.action, 'payload:', action.payload); // Debug
       })
       .addCase(deleteAuthor.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        state.action = 'delete';
+        state.action = null; // Reset action
+        console.log('deleteAuthor rejected - error:', state.error, 'action:', state.action); // Debug
       })
       .addCase(fetchAuthorBooks.pending, (state) => {
         state.loading = true;
         state.error = null;
         state.action = 'fetchBooks';
+        console.log('fetchAuthorBooks pending - action:', state.action); // Debug
       })
       .addCase(fetchAuthorBooks.fulfilled, (state, action) => {
         state.loading = false;
         state.authorBooks = action.payload;
-        state.action = 'fetchBooks';
+        state.action = null; // Reset action
+        console.log('fetchAuthorBooks fulfilled - action:', state.action, 'authorBooks:', state.authorBooks); // Debug
       })
       .addCase(fetchAuthorBooks.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        state.action = 'fetchBooks';
+        state.action = null; // Reset action
+        console.log('fetchAuthorBooks rejected - error:', state.error, 'action:', state.action); // Debug
       });
   },
 });

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
-import { fetchBooks, createBook, updateBook, resetBookState } from './bookSlice';
+import { fetchBooks, createBook, updateBook } from './bookSlice';
 import { fetchAuthors } from '../authors/authorSlice';
 import { fetchPublishers } from '../publishers/publisherSlice';
 import { fetchDistributors } from '../distributors/distributorSlice';
@@ -12,7 +12,7 @@ import './BookList.css';
 
 const BookList = () => {
   const dispatch = useDispatch();
-  const { books, loading, error, action } = useSelector((state) => state.books);
+  const { books, loading, error } = useSelector((state) => state.books);
   const { authors } = useSelector((state) => state.authors);
   const { publishers } = useSelector((state) => state.publishers);
   const { distributors } = useSelector((state) => state.distributors);
@@ -45,7 +45,6 @@ const BookList = () => {
   const [oldImages, setOldImages] = useState([]);
   const [removedOldImageIds, setRemovedOldImageIds] = useState([]);
   const [discountForm, setDiscountForm] = useState(null);
-  const [toastShown, setToastShown] = useState(false);
   const searchInputRef = useRef(null);
   const size = 10;
 
@@ -59,39 +58,11 @@ const BookList = () => {
   }, [dispatch, currentPage, keyword]);
 
   useEffect(() => {
-    if (toastShown) return;
-
-    if (!loading && !error) {
-      if (action === 'fetch') {
-        toast.dismiss();
-        toast.success('Lấy danh sách sách thành công!');
-        setToastShown(true);
-      } else if (action === 'create') {
-        toast.dismiss();
-        toast.success('Tạo sách thành công!');
-        setToastShown(true);
-      } else if (action === 'update') {
-        toast.dismiss();
-        toast.success('Sửa sách thành công!');
-        setToastShown(true);
-      }
-    } else if (error) {
-      if (action === 'fetch') {
-        toast.dismiss();
-        toast.error(`Lấy danh sách sách thất bại: ${error}`);
-      } else if (action === 'create') {
-        toast.dismiss();
-        toast.error(`Tạo sách thất bại: ${error}`);
-      } else if (action === 'update') {
-        toast.dismiss();
-        toast.error(`Sửa sách thất bại: ${error}`);
-      }
+    if (error && error !== 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!') {
+      toast.dismiss();
+      toast.error(`Lấy danh sách sách thất bại: ${error}`);
     }
-
-    return () => {
-      dispatch(resetBookState());
-    };
-  }, [loading, error, action, dispatch, toastShown]);
+  }, [error]);
 
   const handleNextPage = () => {
     if (currentPage < books.totalPages) {
@@ -205,7 +176,7 @@ const BookList = () => {
     }
     if (!distributorId) {
       toast.dismiss();
-      toast.error('Vui lòng chọn nhà phân phối');
+      toast.error('Vui lòng chọn nhà phát hành');
       return false;
     }
     if (!bookTypeId) {
@@ -238,6 +209,9 @@ const BookList = () => {
       createForm.images.forEach((file) => formData.append('images', file));
 
       await dispatch(createBook(formData)).unwrap();
+      toast.dismiss();
+      toast.success('Tạo sách thành công!');
+      dispatch(fetchBooks({ index: currentPage, size, keyword }));
       setCreateForm({
         bookName: '',
         inStock: '',
@@ -258,9 +232,10 @@ const BookList = () => {
       });
       setSelectedCategories([]);
       setImagePreviews([]);
-      setToastShown(false);
     } catch (err) {
-      // Toast đã được xử lý trong slice
+      console.log('createBook error:', err);
+      toast.dismiss();
+      toast.error(`Tạo sách thất bại: ${err.message || err}`);
     }
   };
 
@@ -327,14 +302,18 @@ const BookList = () => {
       remainingImages.forEach((id) => formData.append('remainImages', id));
 
       await dispatch(updateBook({ bookId: editForm.bookId, formData })).unwrap();
+      toast.dismiss();
+      toast.success('Cập nhật sách thành công!');
+      dispatch(fetchBooks({ index: currentPage, size, keyword }));
       setEditForm(null);
       setSelectedCategories([]);
       setImagePreviews([]);
       setOldImages([]);
       setRemovedOldImageIds([]);
-      setToastShown(false);
     } catch (err) {
-      // Toast đã được xử lý trong slice
+      console.log('updateBook error:', err);
+      toast.dismiss();
+      toast.error(`Cập nhật sách thất bại: ${err.message || err}`);
     }
   };
 
@@ -448,6 +427,7 @@ const BookList = () => {
           ...discount,
           startDate,
           endDate,
+          isActive: discount.isActive, // Lấy giá trị isActive từ API
         });
       } else {
         setDiscountForm({
@@ -456,6 +436,7 @@ const BookList = () => {
           endDate: new Date().toISOString().split('T')[0],
           discountType: 'PERCENTAGE',
           discount: '',
+          isActive: true, // Mặc định true khi tạo mới
         });
       }
     } catch (err) {
@@ -465,13 +446,14 @@ const BookList = () => {
         endDate: new Date().toISOString().split('T')[0],
         discountType: 'PERCENTAGE',
         discount: '',
+        isActive: true, // Mặc định true khi có lỗi
       });
     }
   };
 
   const handleSaveDiscount = async () => {
     try {
-      const { bookId, discountId, startDate, endDate, discountType, discount } = discountForm;
+      const { bookId, discountId, startDate, endDate, discountType, discount, isActive } = discountForm;
       if (!discount) {
         toast.dismiss();
         toast.error('Giá trị khuyến mãi không được rỗng');
@@ -493,6 +475,7 @@ const BookList = () => {
         endDate,
         discountType,
         discount: parseFloat(discount),
+        isActive, // Thêm isActive vào payload
       };
 
       if (discountId) {
@@ -500,9 +483,9 @@ const BookList = () => {
       } else {
         await api.post('/admin/discounts', { ...payload, bookId });
       }
-      setDiscountForm(null);
       toast.dismiss();
       toast.success('Cập nhật khuyến mãi thành công!');
+      setDiscountForm(null);
       dispatch(fetchBooks({ index: currentPage, size, keyword }));
     } catch (err) {
       toast.dismiss();
@@ -699,7 +682,7 @@ const BookList = () => {
               <div className="book-list__detail-item"><strong>Ngày cập nhật:</strong> {viewBook.updatedAt ? new Date(viewBook.updatedAt).toLocaleDateString('vi-VN') : 'Chưa cập nhật'}</div>
               <div className="book-list__detail-item"><strong>Tác giả:</strong> {viewBook.author.authorName}</div>
               <div className="book-list__detail-item"><strong>Nhà xuất bản:</strong> {viewBook.publisher.publisherName}</div>
-              <div className="book-list__detail-item"><strong>Nhà phân phối:</strong> {viewBook.distributor.distributorName}</div>
+              <div className="book-list__detail-item"><strong>Nhà phát hành:</strong> {viewBook.distributor.distributorName}</div>
               <div className="book-list__detail-item">
                 <strong>Thể loại:</strong>{' '}
                 {viewBook.categories && viewBook.categories.length > 0
@@ -819,13 +802,13 @@ const BookList = () => {
               </select>
             </div>
             <div className="book-list__form-group">
-              <label className="book-list__label">Nhà phân phối</label>
+              <label className="book-list__label">Nhà phát hành</label>
               <select
                 value={createForm.distributorId}
                 onChange={(e) => setCreateForm({ ...createForm, distributorId: e.target.value })}
                 className="book-list__select"
               >
-                <option value="">Chọn nhà phân phối</option>
+                <option value="">Chọn nhà phát hành</option>
                 {distributors.content?.map((dist) => (
                   <option key={dist.distributorId} value={dist.distributorId}>
                     {dist.distributorName}
@@ -1047,13 +1030,13 @@ const BookList = () => {
               </select>
             </div>
             <div className="book-list__form-group">
-              <label className="book-list__label">Nhà phân phối</label>
+              <label className="book-list__label">Nhà phát hành</label>
               <select
                 value={editForm.distributorId}
                 onChange={(e) => setEditForm({ ...editForm, distributorId: e.target.value })}
                 className="book-list__select"
               >
-                <option value="">Chọn nhà phân phối</option>
+                <option value="">Chọn nhà phát hành</option>
                 {distributors.content?.map((dist) => (
                   <option key={dist.distributorId} value={dist.distributorId}>
                     {dist.distributorName}
@@ -1225,6 +1208,17 @@ const BookList = () => {
                 onChange={(e) => setDiscountForm({ ...discountForm, discount: e.target.value })}
                 className="book-list__input"
               />
+            </div>
+            <div className="book-list__form-group">
+              <div className="book-list__checkbox-group">
+                <label className="book-list__label">Kích hoạt</label>
+                <input
+                  type="checkbox"
+                  checked={discountForm.isActive}
+                  onChange={(e) => setDiscountForm({ ...discountForm, isActive: e.target.checked })}
+                  className="book-list__checkbox"
+                />
+              </div>
             </div>
             <div className="book-list__form-actions">
               <button className="book-list__modal-button" onClick={handleSaveDiscount}>Lưu</button>

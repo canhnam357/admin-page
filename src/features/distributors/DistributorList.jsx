@@ -11,7 +11,6 @@ const DistributorList = () => {
   const [keyword, setKeyword] = useState('');
   const [createForm, setCreateForm] = useState({ distributorName: '', showModal: false });
   const [editDistributor, setEditDistributor] = useState(null);
-  const [toastShown, setToastShown] = useState(false);
   const inputRef = useRef(null);
   const size = 10;
 
@@ -20,39 +19,33 @@ const DistributorList = () => {
   }, [dispatch, currentPage, keyword, size]);
 
   useEffect(() => {
-    if (toastShown) return;
-
-    if (!loading && !error) {
-      if (action === 'fetch') {
-        toast.dismiss();
-        toast.success('Lấy danh sách nhà phát hành thành công!');
-        setToastShown(true);
-      } else if (action === 'create') {
-        toast.dismiss();
-        toast.success('Tạo nhà phát hành thành công!');
-        setToastShown(true);
-      } else if (action === 'update') {
-        toast.dismiss();
-        toast.success('Sửa nhà phát hành thành công!');
-        setToastShown(true);
-      }
-    } else if (error) {
-      if (action === 'fetch') {
-        toast.dismiss();
-        toast.error(`Lấy danh sách nhà phát hành thất bại: ${error}`);
-      } else if (action === 'create') {
-        toast.dismiss();
-        toast.error(`Tạo nhà phát hành thất bại: ${error}`);
-      } else if (action === 'update') {
-        toast.dismiss();
-        toast.error(`Sửa nhà phát hành thất bại: ${error}`);
+    if (!loading && action) {
+      if (error) {
+        if (action === 'fetch') {
+          toast.dismiss();
+          toast.error(`Lấy danh sách nhà phát hành thất bại: ${error}`);
+        } else if (action === 'create') {
+          toast.dismiss();
+          toast.error(`Tạo nhà phát hành thất bại: ${error}`);
+        } else if (action === 'update') {
+          toast.dismiss();
+          toast.error(`Sửa nhà phát hành thất bại: ${error}`);
+        }
+      } else {
+        if (action === 'create') {
+          toast.dismiss();
+          toast.success('Tạo nhà phát hành thành công!');
+        } else if (action === 'update') {
+          toast.dismiss();
+          toast.success('Sửa nhà phát hành thành công!');
+        }
       }
     }
 
     return () => {
       dispatch(resetDistributorState());
     };
-  }, [loading, error, action, dispatch, toastShown]);
+  }, [loading, error, action, dispatch]);
 
   const handleNextPage = () => {
     if (currentPage < distributors.totalPages) {
@@ -109,7 +102,6 @@ const DistributorList = () => {
     if (validateDistributorName(createForm.distributorName)) {
       dispatch(createDistributor(createForm.distributorName));
       setCreateForm({ distributorName: '', showModal: false });
-      setToastShown(false);
     }
   };
 
@@ -121,7 +113,6 @@ const DistributorList = () => {
     if (editDistributor && validateDistributorName(editDistributor.distributorName)) {
       dispatch(updateDistributor({ distributorId: editDistributor.distributorId, distributorName: editDistributor.distributorName }));
       setEditDistributor(null);
-      setToastShown(false);
     }
   };
 

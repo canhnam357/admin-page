@@ -11,7 +11,6 @@ const PublisherList = () => {
   const [keyword, setKeyword] = useState('');
   const [createForm, setCreateForm] = useState({ publisherName: '', showModal: false });
   const [editPublisher, setEditPublisher] = useState(null);
-  const [toastShown, setToastShown] = useState(false);
   const inputRef = useRef(null);
   const size = 10;
 
@@ -20,39 +19,33 @@ const PublisherList = () => {
   }, [dispatch, currentPage, keyword, size]);
 
   useEffect(() => {
-    if (toastShown) return;
-
-    if (!loading && !error) {
-      if (action === 'fetch') {
-        toast.dismiss();
-        toast.success('Lấy danh sách nhà xuất bản thành công!');
-        setToastShown(true);
-      } else if (action === 'create') {
-        toast.dismiss();
-        toast.success('Tạo nhà xuất bản thành công!');
-        setToastShown(true);
-      } else if (action === 'update') {
-        toast.dismiss();
-        toast.success('Sửa nhà xuất bản thành công!');
-        setToastShown(true);
-      }
-    } else if (error) {
-      if (action === 'fetch') {
-        toast.dismiss();
-        toast.error(`Lấy danh sách nhà xuất bản thất bại: ${error}`);
-      } else if (action === 'create') {
-        toast.dismiss();
-        toast.error(`Tạo nhà xuất bản thất bại: ${error}`);
-      } else if (action === 'update') {
-        toast.dismiss();
-        toast.error(`Sửa nhà xuất bản thất bại: ${error}`);
+    if (!loading && action) {
+      if (error) {
+        if (action === 'fetch') {
+          toast.dismiss();
+          toast.error(`Lấy danh sách nhà xuất bản thất bại: ${error}`);
+        } else if (action === 'create') {
+          toast.dismiss();
+          toast.error(`Tạo nhà xuất bản thất bại: ${error}`);
+        } else if (action === 'update') {
+          toast.dismiss();
+          toast.error(`Sửa nhà xuất bản thất bại: ${error}`);
+        }
+      } else {
+        if (action === 'create') {
+          toast.dismiss();
+          toast.success('Tạo nhà xuất bản thành công!');
+        } else if (action === 'update') {
+          toast.dismiss();
+          toast.success('Sửa nhà xuất bản thành công!');
+        }
       }
     }
 
     return () => {
       dispatch(resetPublisherState());
     };
-  }, [loading, error, action, dispatch, toastShown]);
+  }, [loading, error, action, dispatch]);
 
   const handleNextPage = () => {
     if (currentPage < publishers.totalPages) {
@@ -109,7 +102,6 @@ const PublisherList = () => {
     if (validatePublisherName(createForm.publisherName)) {
       dispatch(createPublisher(createForm.publisherName));
       setCreateForm({ publisherName: '', showModal: false });
-      setToastShown(false);
     }
   };
 
@@ -121,7 +113,6 @@ const PublisherList = () => {
     if (editPublisher && validatePublisherName(editPublisher.publisherName)) {
       dispatch(updatePublisher({ publisherId: editPublisher.publisherId, publisherName: editPublisher.publisherName }));
       setEditPublisher(null);
-      setToastShown(false);
     }
   };
 
