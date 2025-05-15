@@ -12,10 +12,10 @@ const Admin = () => {
   const location = useLocation();
 
   useEffect(() => {
-    if (!isAuthenticated && location.pathname !== '/login') {
-      navigate('/login');
-    } else if (isAuthenticated && location.pathname === '/login') {
-      navigate('/books');
+    if (!isAuthenticated && location.pathname !== '/') {
+      navigate('/');
+    } else if (isAuthenticated && location.pathname === '/') {
+      navigate('/statistics');
     }
   }, [isAuthenticated, navigate, location]);
 

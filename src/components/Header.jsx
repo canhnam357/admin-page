@@ -11,14 +11,14 @@ const Header = () => {
 
   const handleLogout = async () => {
     await dispatch(logoutUser());
-    navigate('/login');
+    navigate('/');
   };
 
   useEffect(() => {
     const handleApiError = (event) => {
       if (event.detail && event.detail.message === 'Không tìm thấy refresh token') {
         dispatch(logoutUser());
-        navigate('/login');
+        navigate('/');
       }
     };
 
