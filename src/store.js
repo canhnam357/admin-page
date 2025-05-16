@@ -8,6 +8,7 @@ import bookTypeReducer from './features/book-types/bookTypeSlice';
 import bookReducer from './features/books/bookSlice';
 import userReducer from './features/users/userSlice';
 import orderStatusReducer from './features/order-status/orderStatusSlice';
+import refundStatusReducer from './features/refundStatus/refundStatusSlice';
 import statisticsReducer from './features/statistics/statisticsSlice';
 
 export const store = configureStore({
@@ -21,6 +22,7 @@ export const store = configureStore({
     books: bookReducer,
     users: userReducer,
     orderStatuses: orderStatusReducer,
+    refundStatuses: refundStatusReducer,
     statistics: statisticsReducer,
   },
 });

@@ -1,51 +1,55 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
-import { fetchPublishers, createPublisher, updatePublisher, resetPublisherState } from './publisherSlice';
+import { fetchPublishers, createPublisher, updatePublisher } from './publisherSlice';
 import './PublisherList.css';
+
+// Debounce utility function
+const debounce = (func, delay) => {
+  let timeoutId;
+  return (...args) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func(...args), delay);
+  };
+};
 
 const PublisherList = () => {
   const dispatch = useDispatch();
-  const { publishers, loading, error, action } = useSelector((state) => state.publishers);
+  const { publishers, loading, error } = useSelector((state) => state.publishers);
   const [currentPage, setCurrentPage] = useState(1);
   const [keyword, setKeyword] = useState('');
   const [createForm, setCreateForm] = useState({ publisherName: '', showModal: false });
   const [editPublisher, setEditPublisher] = useState(null);
-  const inputRef = useRef(null);
   const size = 10;
+
+  // Debounced search function
+  const debouncedFetchPublishers = useMemo(
+    () =>
+      debounce((value) => {
+        setKeyword(value);
+        setCurrentPage(1);
+        dispatch(fetchPublishers({ index: 1, size, keyword: value }));
+      }, 300),
+    [dispatch, size]
+  );
+
+  // Handle search input change
+  const handleSearch = (e) => {
+    const value = e.target.value;
+    setKeyword(value);
+    debouncedFetchPublishers(value);
+  };
 
   useEffect(() => {
     dispatch(fetchPublishers({ index: currentPage, size, keyword }));
   }, [dispatch, currentPage, keyword, size]);
 
   useEffect(() => {
-    if (!loading && action) {
-      if (error) {
-        if (action === 'fetch') {
-          toast.dismiss();
-          toast.error(`Lấy danh sách nhà xuất bản thất bại: ${error}`);
-        } else if (action === 'create') {
-          toast.dismiss();
-          toast.error(`Tạo nhà xuất bản thất bại: ${error}`);
-        } else if (action === 'update') {
-          toast.dismiss();
-          toast.error(`Sửa nhà xuất bản thất bại: ${error}`);
-        }
-      } else {
-        if (action === 'create') {
-          toast.dismiss();
-          toast.success('Tạo nhà xuất bản thành công!');
-        } else if (action === 'update') {
-          toast.dismiss();
-          toast.success('Sửa nhà xuất bản thành công!');
-        }
-      }
+    if (error && error !== 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!') {
+      toast.dismiss();
+      toast.error(`Lỗi: ${error}`);
     }
-
-    return () => {
-      dispatch(resetPublisherState());
-    };
-  }, [loading, error, action, dispatch]);
+  }, [error]);
 
   const handleNextPage = () => {
     if (currentPage < publishers.totalPages) {
@@ -63,27 +67,6 @@ const PublisherList = () => {
     setCurrentPage(page);
   };
 
-  const debounce = (func, delay) => {
-    let timeoutId;
-    return (...args) => {
-      if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        const [value] = args;
-        func(value === undefined || value.trim() === '' ? '' : value);
-      }, delay);
-    };
-  };
-
-  const handleSearch = debounce((value) => {
-    setKeyword(value);
-    setCurrentPage(1);
-  }, 150);
-
-  const handleInputChange = (e) => {
-    const value = e.target.value;
-    handleSearch(value);
-  };
-
   const validatePublisherName = (name) => {
     if (!name.trim()) {
       toast.dismiss();
@@ -98,10 +81,18 @@ const PublisherList = () => {
     return true;
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (validatePublisherName(createForm.publisherName)) {
-      dispatch(createPublisher(createForm.publisherName));
-      setCreateForm({ publisherName: '', showModal: false });
+      try {
+        await dispatch(createPublisher(createForm.publisherName)).unwrap();
+        setCreateForm({ publisherName: '', showModal: false });
+        dispatch(fetchPublishers({ index: currentPage, size, keyword }));
+        toast.dismiss();
+        toast.success('Tạo nhà xuất bản thành công!');
+      } catch (err) {
+        toast.dismiss();
+        toast.error(`Tạo nhà xuất bản thất bại: ${err}`);
+      }
     }
   };
 
@@ -109,10 +100,20 @@ const PublisherList = () => {
     setEditPublisher({ ...publisher });
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (editPublisher && validatePublisherName(editPublisher.publisherName)) {
-      dispatch(updatePublisher({ publisherId: editPublisher.publisherId, publisherName: editPublisher.publisherName }));
-      setEditPublisher(null);
+      try {
+        await dispatch(
+          updatePublisher({ publisherId: editPublisher.publisherId, publisherName: editPublisher.publisherName })
+        ).unwrap();
+        setEditPublisher(null);
+        dispatch(fetchPublishers({ index: currentPage, size, keyword }));
+        toast.dismiss();
+        toast.success('Cập nhật nhà xuất bản thành công!');
+      } catch (err) {
+        toast.dismiss();
+        toast.error(`Cập nhật nhà xuất bản thất bại: ${err}`);
+      }
     }
   };
 
@@ -164,12 +165,11 @@ const PublisherList = () => {
         </div>
         <div className="publisher__search-bar">
           <input
-            ref={inputRef}
             type="text"
             lang="vi"
             placeholder="Tìm kiếm nhà xuất bản..."
             value={keyword}
-            onChange={handleInputChange}
+            onChange={handleSearch}
             className="publisher__search-input"
           />
         </div>

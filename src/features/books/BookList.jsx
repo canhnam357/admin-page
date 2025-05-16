@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
 import { fetchBooks, createBook, updateBook } from './bookSlice';
@@ -9,6 +9,15 @@ import { fetchBookTypes } from '../book-types/bookTypeSlice';
 import { fetchCategories } from '../categories/categorySlice';
 import api from '../../api/api';
 import './BookList.css';
+
+// Debounce utility function
+const debounce = (func, delay) => {
+  let timeoutId;
+  return (...args) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func(...args), delay);
+  };
+};
 
 const BookList = () => {
   const dispatch = useDispatch();
@@ -45,8 +54,25 @@ const BookList = () => {
   const [oldImages, setOldImages] = useState([]);
   const [removedOldImageIds, setRemovedOldImageIds] = useState([]);
   const [discountForm, setDiscountForm] = useState(null);
-  const searchInputRef = useRef(null);
   const size = 10;
+
+  // Debounced search function
+  const debouncedFetchBooks = useMemo(
+    () =>
+      debounce((value) => {
+        setKeyword(value);
+        setCurrentPage(1);
+        dispatch(fetchBooks({ index: 1, size, keyword: value }));
+      }, 300),
+    [dispatch, size]
+  );
+
+  // Handle search input change
+  const handleSearch = (e) => {
+    const value = e.target.value;
+    setKeyword(value); // Update input value immediately for smooth typing
+    debouncedFetchBooks(value);
+  };
 
   useEffect(() => {
     dispatch(fetchBooks({ index: currentPage, size, keyword }));
@@ -64,6 +90,94 @@ const BookList = () => {
     }
   }, [error]);
 
+  // Hàm chuyển đổi từ dd-MM-yyyy sang YYYY-MM-DD để hiển thị trong input
+  const convertToInputFormat = (dateStr) => {
+    if (!dateStr) return '';
+    const [day, month, year] = dateStr.split('-');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Hàm chuyển đổi từ YYYY-MM-DD sang dd-MM-yyyy để gửi lên API
+  const convertToApiFormat = (dateStr) => {
+    if (!dateStr) return '';
+    const [year, month, day] = dateStr.split('-');
+    return `${day.padStart(2, '0')}-${month.padStart(2, '0')}-${year}`;
+  };
+
+  // Hàm chuyển đổi từ HH:mm:ss dd-MM-yyyy sang YYYY-MM-DDThh:mm:ss cho input datetime-local
+  const formatToDateTimeLocal = (dateTimeStr) => {
+    if (!dateTimeStr) return '';
+    const dateTimeRegex = /^(\d{2}):(\d{2}):(\d{2}) (0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-(\d{4})$/;
+    if (dateTimeRegex.test(dateTimeStr)) {
+      const [, hours, minutes, seconds, day, month, year] = dateTimeStr.match(dateTimeRegex);
+      return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+    }
+    try {
+      const date = new Date(dateTimeStr);
+      if (isNaN(date.getTime())) return '';
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+    } catch {
+      return '';
+    }
+  };
+
+  // Hàm chuyển đổi từ YYYY-MM-DDThh:mm:ss sang HH:mm:ss dd-MM-yyyy để gửi API
+  const formatToApiDateTime = (dateTimeStr) => {
+    if (!dateTimeStr) return '';
+    try {
+      const date = new Date(dateTimeStr);
+      if (isNaN(date.getTime())) return '';
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${hours}:${minutes}:${seconds} ${day}-${month}-${year}`;
+    } catch {
+      return '';
+    }
+  };
+
+  // Hàm hiển thị ngày ở định dạng dd-MM-yyyy
+  const formatDisplayDate = (dateString) => {
+    if (!dateString) return 'Chưa cập nhật';
+    const dateRegex = /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\d{4}$/;
+    if (dateRegex.test(dateString)) {
+      return dateString;
+    }
+    return 'Chưa cập nhật';
+  };
+
+  // Hàm hiển thị datetime, trả về object { time, date }
+  const formatDisplayDateTime = (dateTimeString) => {
+    if (!dateTimeString) return { time: 'Chưa cập nhật', date: '' };
+    const dateTimeRegex = /^(\d{2}:\d{2}:\d{2}) (0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-(\d{4})$/;
+    if (dateTimeRegex.test(dateTimeString)) {
+      const [, time, day, month, year] = dateTimeString.match(dateTimeRegex);
+      return { time, date: `${day}-${month}-${year}` };
+    }
+    try {
+      const date = new Date(dateTimeString);
+      if (isNaN(date.getTime())) return { time: 'Chưa cập nhật', date: '' };
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      const seconds = date.getSeconds().toString().padStart(2, '0');
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const year = date.getFullYear();
+      return { time: `${hours}:${minutes}:${seconds}`, date: `${day}-${month}-${year}` };
+    } catch {
+      return { time: 'Chưa cập nhật', date: '' };
+    }
+  };
+
   const handleNextPage = () => {
     if (currentPage < books.totalPages) {
       setCurrentPage(currentPage + 1);
@@ -80,27 +194,6 @@ const BookList = () => {
     setCurrentPage(page);
   };
 
-  const debounce = (func, delay) => {
-    let timeoutId;
-    return (...args) => {
-      if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        const [value] = args;
-        func(value === undefined || value.trim() === '' ? '' : value);
-      }, delay);
-    };
-  };
-
-  const handleSearch = debounce((value) => {
-    setKeyword(value);
-    setCurrentPage(1);
-  }, 150);
-
-  const handleInputChange = (e) => {
-    const value = e.target.value;
-    handleSearch(value);
-  };
-
   const validateBookForm = (form, isEdit = false) => {
     const {
       bookName,
@@ -112,6 +205,7 @@ const BookList = () => {
       publisherId,
       distributorId,
       bookTypeId,
+      publishedDate,
     } = form;
 
     if (!bookName.trim()) {
@@ -184,6 +278,11 @@ const BookList = () => {
       toast.error('Vui lòng chọn loại sách');
       return false;
     }
+    if (!publishedDate) {
+      toast.dismiss();
+      toast.error('Ngày xuất bản không được rỗng');
+      return false;
+    }
     return true;
   };
 
@@ -197,7 +296,13 @@ const BookList = () => {
       formData.append('price', createForm.price);
       formData.append('description', createForm.description);
       formData.append('numberOfPage', createForm.numberOfPage);
-      formData.append('publishedDate', createForm.publishedDate);
+      const formattedDate = convertToApiFormat(createForm.publishedDate);
+      if (!formattedDate) {
+        toast.dismiss();
+        toast.error('Ngày xuất bản không hợp lệ');
+        return;
+      }
+      formData.append('publishedDate', formattedDate);
       formData.append('weight', createForm.weight);
       formData.append('authorId', createForm.authorId);
       formData.append('publisherId', createForm.publisherId);
@@ -247,7 +352,7 @@ const BookList = () => {
       price: book.price,
       description: book.description || '',
       numberOfPage: book.numberOfPage,
-      publishedDate: new Date(book.publishedDate).toISOString().split('T')[0],
+      publishedDate: convertToInputFormat(book.publishedDate),
       weight: book.weight,
       authorId: book.author.authorId,
       publisherId: book.publisher.publisherId,
@@ -275,7 +380,13 @@ const BookList = () => {
       formData.append('price', editForm.price);
       formData.append('description', editForm.description);
       formData.append('numberOfPage', editForm.numberOfPage);
-      formData.append('publishedDate', editForm.publishedDate);
+      const formattedDate = convertToApiFormat(editForm.publishedDate);
+      if (!formattedDate) {
+        toast.dismiss();
+        toast.error('Ngày xuất bản không hợp lệ');
+        return;
+      }
+      formData.append('publishedDate', formattedDate);
       formData.append('weight', editForm.weight);
       formData.append('authorId', editForm.authorId);
       formData.append('publisherId', editForm.publisherId);
@@ -419,34 +530,42 @@ const BookList = () => {
       const response = await api.get(`/admin/discounts/${bookId}`);
       const discount = response.data.result;
       if (discount) {
-        const [startDay, startMonth, startYear] = discount.startDate.split(' ')[0].split('-');
-        const [endDay, endMonth, endYear] = discount.endDate.split(' ')[0].split('-');
-        const startDate = `${startYear}-${startMonth.padStart(2, '0')}-${startDay.padStart(2, '0')}`;
-        const endDate = `${endYear}-${endMonth.padStart(2, '0')}-${endDay.padStart(2, '0')}`;
+        const startDate = formatToDateTimeLocal(discount.startDate);
+        const endDate = formatToDateTimeLocal(discount.endDate);
         setDiscountForm({
           ...discount,
           startDate,
           endDate,
-          isActive: discount.isActive, // Lấy giá trị isActive từ API
+          isActive: discount.isActive,
         });
       } else {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const defaultDateTime = `${year}-${month}-${day}T00:00:00`;
         setDiscountForm({
           bookId,
-          startDate: new Date().toISOString().split('T')[0],
-          endDate: new Date().toISOString().split('T')[0],
+          startDate: defaultDateTime,
+          endDate: defaultDateTime,
           discountType: 'PERCENTAGE',
           discount: '',
-          isActive: true, // Mặc định true khi tạo mới
+          isActive: true,
         });
       }
     } catch (err) {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const defaultDateTime = `${year}-${month}-${day}T00:00:00`;
       setDiscountForm({
         bookId,
-        startDate: new Date().toISOString().split('T')[0],
-        endDate: new Date().toISOString().split('T')[0],
+        startDate: defaultDateTime,
+        endDate: defaultDateTime,
         discountType: 'PERCENTAGE',
         discount: '',
-        isActive: true, // Mặc định true khi có lỗi
+        isActive: true,
       });
     }
   };
@@ -464,18 +583,28 @@ const BookList = () => {
         toast.error('Giá trị khuyến mãi phần trăm phải từ 0 đến 99');
         return;
       }
-      if (new Date(startDate) > new Date(endDate)) {
+      const startDateTime = new Date(startDate);
+      const endDateTime = new Date(endDate);
+      if (startDateTime > endDateTime) {
         toast.dismiss();
         toast.error('Ngày bắt đầu phải trước ngày kết thúc');
         return;
       }
 
+      const formattedStartDate = formatToApiDateTime(startDate);
+      const formattedEndDate = formatToApiDateTime(endDate);
+      if (!formattedStartDate || !formattedEndDate) {
+        toast.dismiss();
+        toast.error('Ngày giờ không hợp lệ');
+        return;
+      }
+
       const payload = {
-        startDate,
-        endDate,
+        startDate: formattedStartDate,
+        endDate: formattedEndDate,
         discountType,
         discount: parseFloat(discount),
-        isActive, // Thêm isActive vào payload
+        isActive,
       };
 
       if (discountId) {
@@ -554,12 +683,11 @@ const BookList = () => {
         </div>
         <div className="book-list__search-bar">
           <input
-            ref={searchInputRef}
             type="text"
             lang="vi"
             placeholder="Tìm kiếm sách..."
             value={keyword}
-            onChange={handleInputChange}
+            onChange={handleSearch}
             className="book-list__search-input"
           />
         </div>
@@ -583,26 +711,40 @@ const BookList = () => {
           ) : error ? (
             <tr><td colSpan="8" className="book-list__empty">Lỗi: {error}</td></tr>
           ) : books.content && books.content.length > 0 ? (
-            books.content.map((book) => (
-              <tr key={book.bookId} className="book-list__table-row">
-                <td>{truncateBookName(book.bookName)}</td>
-                <td>{book.inStock}</td>
-                <td>{book.price.toLocaleString()} VNĐ</td>
-                <td>{new Date(book.createdAt).toLocaleDateString('vi-VN')}</td>
-                <td>{book.updatedAt ? new Date(book.updatedAt).toLocaleDateString('vi-VN') : 'Chưa cập nhật'}</td>
-                <td className={book.isDeleted ? 'book-list__status--deleted-yes' : 'book-list__status--deleted-no'}>
-                  {book.isDeleted ? 'YES' : 'NO'}
-                </td>
-                <td className={book.newArrival ? 'book-list__status--new-yes' : 'book-list__status--new-no'}>
-                  {book.newArrival ? 'YES' : 'NO'}
-                </td>
-                <td>
-                  <button className="book-list__action-button book-list__action-button--edit" onClick={() => handleEdit(book)}>Sửa</button>
-                  <button className="book-list__action-button book-list__action-button--view" onClick={() => handleView(book)}>Xem</button>
-                  <button className="book-list__action-button book-list__action-button--discount" onClick={() => fetchDiscount(book.bookId)}>Khuyến mãi</button>
-                </td>
-              </tr>
-            ))
+            books.content.map((book) => {
+              const createdAt = formatDisplayDateTime(book.createdAt);
+              const updatedAt = formatDisplayDateTime(book.updatedAt || '');
+              return (
+                <tr key={book.bookId} className="book-list__table-row">
+                  <td>{truncateBookName(book.bookName)}</td>
+                  <td>{book.inStock}</td>
+                  <td>{book.price.toLocaleString()} VNĐ</td>
+                  <td>
+                    <div className="book-list__datetime">
+                      <span>{createdAt.time}</span>
+                      <span>{createdAt.date}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div className="book-list__datetime">
+                      <span>{updatedAt.time}</span>
+                      <span>{updatedAt.date}</span>
+                    </div>
+                  </td>
+                  <td className={book.isDeleted ? 'book-list__status--deleted-yes' : 'book-list__status--deleted-no'}>
+                    {book.isDeleted ? 'YES' : 'NO'}
+                  </td>
+                  <td className={book.newArrival ? 'book-list__status--new-yes' : 'book-list__status--new-no'}>
+                    {book.newArrival ? 'YES' : 'NO'}
+                  </td>
+                  <td>
+                    <button className="book-list__action-button book-list__action-button--edit" onClick={() => handleEdit(book)}>Sửa</button>
+                    <button className="book-list__action-button book-list__action-button--view" onClick={() => handleView(book)}>Xem</button>
+                    <button className="book-list__action-button book-list__action-button--discount" onClick={() => fetchDiscount(book.bookId)}>Khuyến mãi</button>
+                  </td>
+                </tr>
+              );
+            })
           ) : (
             <tr><td colSpan="8" className="book-list__empty">Không có sách nào</td></tr>
           )}
@@ -676,10 +818,10 @@ const BookList = () => {
               <div className="book-list__detail-item"><strong>Giá:</strong> {viewBook.price.toLocaleString()} VNĐ</div>
               <div className="book-list__detail-item"><strong>Mô tả:</strong> <p>{viewBook.description || 'Không có mô tả'}</p></div>
               <div className="book-list__detail-item"><strong>Số trang:</strong> {viewBook.numberOfPage}</div>
-              <div className="book-list__detail-item"><strong>Ngày xuất bản:</strong> {new Date(viewBook.publishedDate).toLocaleDateString('vi-VN')}</div>
+              <div className="book-list__detail-item"><strong>Ngày xuất bản:</strong> {formatDisplayDate(viewBook.publishedDate)}</div>
               <div className="book-list__detail-item"><strong>Cân nặng:</strong> {viewBook.weight} g</div>
-              <div className="book-list__detail-item"><strong>Ngày tạo:</strong> {new Date(viewBook.createdAt).toLocaleDateString('vi-VN')}</div>
-              <div className="book-list__detail-item"><strong>Ngày cập nhật:</strong> {viewBook.updatedAt ? new Date(viewBook.updatedAt).toLocaleDateString('vi-VN') : 'Chưa cập nhật'}</div>
+              <div className="book-list__detail-item"><strong>Ngày tạo:</strong> {formatDisplayDateTime(viewBook.createdAt).time} {formatDisplayDateTime(viewBook.createdAt).date}</div>
+              <div className="book-list__detail-item"><strong>Ngày cập nhật:</strong> {viewBook.updatedAt ? `${formatDisplayDateTime(viewBook.updatedAt).time} ${formatDisplayDateTime(viewBook.updatedAt).date}` : 'Chưa cập nhật'}</div>
               <div className="book-list__detail-item"><strong>Tác giả:</strong> {viewBook.author.authorName}</div>
               <div className="book-list__detail-item"><strong>Nhà xuất bản:</strong> {viewBook.publisher.publisherName}</div>
               <div className="book-list__detail-item"><strong>Nhà phát hành:</strong> {viewBook.distributor.distributorName}</div>
@@ -1173,7 +1315,7 @@ const BookList = () => {
             <div className="book-list__form-group">
               <label className="book-list__label">Ngày bắt đầu</label>
               <input
-                type="date"
+                type="datetime-local"
                 value={discountForm.startDate}
                 onChange={(e) => setDiscountForm({ ...discountForm, startDate: e.target.value })}
                 className="book-list__input"
@@ -1182,7 +1324,7 @@ const BookList = () => {
             <div className="book-list__form-group">
               <label className="book-list__label">Ngày kết thúc</label>
               <input
-                type="date"
+                type="datetime-local"
                 value={discountForm.endDate}
                 onChange={(e) => setDiscountForm({ ...discountForm, endDate: e.target.value })}
                 className="book-list__input"

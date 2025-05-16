@@ -1,15 +1,18 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../../api/api';
-import { logoutUser } from '../auth/authSlice'; // Import logoutUser
+import { logoutUser } from '../auth/authSlice';
 
 export const fetchPublishers = createAsyncThunk(
   'publishers/fetchPublishers',
-  async ({ index = 1, size = 10, keyword = '' }, { rejectWithValue, dispatch }) => {
+  async ({ index = 1, size = 10, keyword = '' }, { rejectWithValue, dispatch, getState }) => {
+    const state = getState().publishers;
+    const newRequestId = state.currentPublishersRequestId + 1;
+    dispatch(setPublishersRequestId(newRequestId));
     try {
       const response = await api.get('/admin/publishers', {
         params: { index, size, keyword },
       });
-      return response.data.result;
+      return { data: response.data.result, requestId: newRequestId };
     } catch (error) {
       if (error.response?.status === 401) {
         dispatch(logoutUser());
@@ -82,12 +85,11 @@ const publisherSlice = createSlice({
     publishers: { content: [], totalPages: 0, totalElements: 0 },
     loading: false,
     error: null,
-    action: null,
+    currentPublishersRequestId: 0,
   },
   reducers: {
-    resetPublisherState: (state) => {
-      state.error = null;
-      state.action = null;
+    setPublishersRequestId: (state, action) => {
+      state.currentPublishersRequestId = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -95,38 +97,37 @@ const publisherSlice = createSlice({
       .addCase(fetchPublishers.pending, (state) => {
         state.loading = true;
         state.error = null;
-        state.action = 'fetch';
       })
       .addCase(fetchPublishers.fulfilled, (state, action) => {
-        state.loading = false;
-        state.publishers = action.payload;
-        state.action = 'fetch';
+        const { data, requestId } = action.payload;
+        if (requestId === state.currentPublishersRequestId) {
+          state.loading = false;
+          state.publishers = data;
+          state.error = null;
+        }
       })
       .addCase(fetchPublishers.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        state.action = 'fetch';
+        state.publishers = { content: [], totalPages: 0, totalElements: 0 };
       })
       .addCase(createPublisher.pending, (state) => {
         state.loading = true;
         state.error = null;
-        state.action = 'create';
       })
       .addCase(createPublisher.fulfilled, (state, action) => {
         state.loading = false;
         state.publishers.content.push(action.payload);
         state.publishers.totalElements += 1;
-        state.action = 'create';
+        state.error = null;
       })
       .addCase(createPublisher.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        state.action = 'create';
       })
       .addCase(updatePublisher.pending, (state) => {
         state.loading = true;
         state.error = null;
-        state.action = 'update';
       })
       .addCase(updatePublisher.fulfilled, (state, action) => {
         state.loading = false;
@@ -134,17 +135,15 @@ const publisherSlice = createSlice({
           (publisher) => publisher.publisherId === action.payload.publisherId
         );
         if (index !== -1) state.publishers.content[index] = action.payload;
-        state.action = 'update';
+        state.error = null;
       })
       .addCase(updatePublisher.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        state.action = 'update';
       })
       .addCase(deletePublisher.pending, (state) => {
         state.loading = true;
         state.error = null;
-        state.action = 'delete';
       })
       .addCase(deletePublisher.fulfilled, (state, action) => {
         state.loading = false;
@@ -152,15 +151,14 @@ const publisherSlice = createSlice({
           (publisher) => publisher.publisherId !== action.payload
         );
         state.publishers.totalElements -= 1;
-        state.action = 'delete';
+        state.error = null;
       })
       .addCase(deletePublisher.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        state.action = 'delete';
       });
   },
 });
 
-export const { resetPublisherState } = publisherSlice.actions;
+export const { setPublishersRequestId } = publisherSlice.actions;
 export default publisherSlice.reducer;

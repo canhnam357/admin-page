@@ -4,12 +4,15 @@ import { logoutUser } from '../auth/authSlice';
 
 export const fetchAuthors = createAsyncThunk(
   'authors/fetchAuthors',
-  async ({ index = 1, size = 10, keyword = '' }, { rejectWithValue, dispatch }) => {
+  async ({ index = 1, size = 10, keyword = '' }, { rejectWithValue, dispatch, getState }) => {
+    const state = getState().authors;
+    const newRequestId = state.currentAuthorsRequestId + 1;
+    dispatch(setAuthorsRequestId(newRequestId));
     try {
       const response = await api.get('/admin/authors', {
         params: { index, size, keyword },
       });
-      return response.data.result;
+      return { data: response.data.result, requestId: newRequestId };
     } catch (error) {
       if (error.response?.status === 401) {
         dispatch(logoutUser());
@@ -78,12 +81,15 @@ export const deleteAuthor = createAsyncThunk(
 
 export const fetchAuthorBooks = createAsyncThunk(
   'authors/fetchAuthorBooks',
-  async ({ authorId, index = 1, size = 10 }, { rejectWithValue, dispatch }) => {
+  async ({ authorId, index = 1, size = 10 }, { rejectWithValue, dispatch, getState }) => {
+    const state = getState().authors;
+    const newRequestId = state.currentBooksRequestId + 1;
+    dispatch(setBooksRequestId(newRequestId));
     try {
       const response = await api.get(`/admin/books/author_books/${authorId}`, {
         params: { index, size },
       });
-      return response.data.result;
+      return { data: response.data.result, requestId: newRequestId };
     } catch (error) {
       if (error.response?.status === 401) {
         dispatch(logoutUser());
@@ -103,12 +109,15 @@ const authorSlice = createSlice({
     authorBooks: { content: [], totalPages: 0, totalElements: 0 },
     loading: false,
     error: null,
-    action: null,
+    currentAuthorsRequestId: 0,
+    currentBooksRequestId: 0,
   },
   reducers: {
-    resetAuthorState: (state) => {
-      state.error = null;
-      state.action = null;
+    setAuthorsRequestId: (state, action) => {
+      state.currentAuthorsRequestId = action.payload;
+    },
+    setBooksRequestId: (state, action) => {
+      state.currentBooksRequestId = action.payload;
     },
     resetAuthorBooks: (state) => {
       state.authorBooks = { content: [], totalPages: 0, totalElements: 0 };
@@ -119,45 +128,37 @@ const authorSlice = createSlice({
       .addCase(fetchAuthors.pending, (state) => {
         state.loading = true;
         state.error = null;
-        state.action = 'fetch';
-        console.log('fetchAuthors pending - action:', state.action); // Debug
       })
       .addCase(fetchAuthors.fulfilled, (state, action) => {
-        state.loading = false;
-        state.authors = action.payload;
-        state.action = null; // Reset action
-        console.log('fetchAuthors fulfilled - action:', state.action, 'authors:', state.authors); // Debug
+        const { data, requestId } = action.payload;
+        if (requestId === state.currentAuthorsRequestId) {
+          state.loading = false;
+          state.authors = data;
+          state.error = null;
+        }
       })
       .addCase(fetchAuthors.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        state.action = null; // Reset action
-        console.log('fetchAuthors rejected - error:', state.error, 'action:', state.action); // Debug
+        state.authors = { content: [], totalPages: 0, totalElements: 0 };
       })
       .addCase(createAuthor.pending, (state) => {
         state.loading = true;
         state.error = null;
-        state.action = 'create';
-        console.log('createAuthor pending - action:', state.action); // Debug
       })
       .addCase(createAuthor.fulfilled, (state, action) => {
         state.loading = false;
         state.authors.content.push(action.payload);
         state.authors.totalElements += 1;
-        state.action = null; // Reset action
-        console.log('createAuthor fulfilled - action:', state.action, 'payload:', action.payload); // Debug
+        state.error = null;
       })
       .addCase(createAuthor.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        state.action = null; // Reset action
-        console.log('createAuthor rejected - error:', state.error, 'action:', state.action); // Debug
       })
       .addCase(updateAuthor.pending, (state) => {
         state.loading = true;
         state.error = null;
-        state.action = 'update';
-        console.log('updateAuthor pending - action:', state.action); // Debug
       })
       .addCase(updateAuthor.fulfilled, (state, action) => {
         state.loading = false;
@@ -165,20 +166,15 @@ const authorSlice = createSlice({
           (author) => author.authorId === action.payload.authorId
         );
         if (index !== -1) state.authors.content[index] = action.payload;
-        state.action = null; // Reset action
-        console.log('updateAuthor fulfilled - action:', state.action, 'payload:', action.payload); // Debug
+        state.error = null;
       })
       .addCase(updateAuthor.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        state.action = null; // Reset action
-        console.log('updateAuthor rejected - error:', state.error, 'action:', state.action); // Debug
       })
       .addCase(deleteAuthor.pending, (state) => {
         state.loading = true;
         state.error = null;
-        state.action = 'delete';
-        console.log('deleteAuthor pending - action:', state.action); // Debug
       })
       .addCase(deleteAuthor.fulfilled, (state, action) => {
         state.loading = false;
@@ -186,35 +182,31 @@ const authorSlice = createSlice({
           (author) => author.authorId !== action.payload
         );
         state.authors.totalElements -= 1;
-        state.action = null; // Reset action
-        console.log('deleteAuthor fulfilled - action:', state.action, 'payload:', action.payload); // Debug
+        state.error = null;
       })
       .addCase(deleteAuthor.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        state.action = null; // Reset action
-        console.log('deleteAuthor rejected - error:', state.error, 'action:', state.action); // Debug
       })
       .addCase(fetchAuthorBooks.pending, (state) => {
         state.loading = true;
         state.error = null;
-        state.action = 'fetchBooks';
-        console.log('fetchAuthorBooks pending - action:', state.action); // Debug
       })
       .addCase(fetchAuthorBooks.fulfilled, (state, action) => {
-        state.loading = false;
-        state.authorBooks = action.payload;
-        state.action = null; // Reset action
-        console.log('fetchAuthorBooks fulfilled - action:', state.action, 'authorBooks:', state.authorBooks); // Debug
+        const { data, requestId } = action.payload;
+        if (requestId === state.currentBooksRequestId) {
+          state.loading = false;
+          state.authorBooks = data;
+          state.error = null;
+        }
       })
       .addCase(fetchAuthorBooks.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        state.action = null; // Reset action
-        console.log('fetchAuthorBooks rejected - error:', state.error, 'action:', state.action); // Debug
+        state.authorBooks = { content: [], totalPages: 0, totalElements: 0 };
       });
   },
 });
 
-export const { resetAuthorState, resetAuthorBooks } = authorSlice.actions;
+export const { setAuthorsRequestId, setBooksRequestId, resetAuthorBooks } = authorSlice.actions;
 export default authorSlice.reducer;

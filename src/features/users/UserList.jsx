@@ -1,49 +1,54 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
-import { fetchUsers, updateUserStatus, resetUserState } from './userSlice';
+import { fetchUsers, updateUserStatus } from './userSlice';
 import './UserList.css';
+
+// Debounce utility function
+const debounce = (func, delay) => {
+  let timeoutId;
+  return (...args) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func(...args), delay);
+  };
+};
 
 const UserList = () => {
   const dispatch = useDispatch();
-  const { users, loading, error, action } = useSelector((state) => state.users);
+  const { users, loading, error } = useSelector((state) => state.users);
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState({ email: '', isActive: 2, isVerified: 2 });
   const [editUser, setEditUser] = useState(null);
-  const searchInputRef = useRef(null);
-  const prevLoadingRef = useRef(loading); // Lưu trạng thái loading trước đó
   const size = 10;
+
+  // Debounced search function
+  const debouncedFetchUsers = useMemo(
+    () =>
+      debounce((email) => {
+        setFilters((prev) => ({ ...prev, email }));
+        setCurrentPage(1);
+        dispatch(fetchUsers({ index: 1, size, email, isActive: filters.isActive, isVerified: filters.isVerified }));
+      }, 300),
+    [dispatch, size, filters.isActive, filters.isVerified]
+  );
+
+  // Handle search input change
+  const handleSearch = (e) => {
+    const value = e.target.value;
+    setFilters((prev) => ({ ...prev, email: value }));
+    debouncedFetchUsers(value);
+  };
 
   useEffect(() => {
     dispatch(fetchUsers({ index: currentPage, size, ...filters }));
   }, [dispatch, currentPage, filters]);
 
   useEffect(() => {
-    // console.log('useEffect triggered - loading:', loading, 'error:', error, 'action:', action); // Debug
-    // // Kiểm tra khi loading thay đổi hoặc action tồn tại
-    // if (prevLoadingRef.current && !loading && action) {
-    //   toast.dismiss();
-    //   if (!error) {
-    //     if (action === 'fetch') {
-    //       toast.success('Lấy danh sách người dùng thành công!');
-    //     } else if (action === 'update') {
-    //       toast.success('Cập nhật trạng thái người dùng thành công!');
-    //     }
-    //   } else {
-    //     if (action === 'fetch') {
-    //       toast.error(`Lấy danh sách người dùng thất bại: ${error}`);
-    //     } else if (action === 'update') {
-    //       toast.error(`Cập nhật trạng thái thất bại: ${error}`);
-    //     }
-    //   }
-    // }
-
-    prevLoadingRef.current = loading;
-
-    return () => {
-      dispatch(resetUserState());
-    };
-  }, [loading, error, action, dispatch]);
+    if (error && error !== 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!') {
+      toast.dismiss();
+      toast.error(`Lấy danh sách người dùng thất bại: ${error}`);
+    }
+  }, [error]);
 
   const handleNextPage = () => {
     if (currentPage < users.totalPages) {
@@ -61,30 +66,10 @@ const UserList = () => {
     setCurrentPage(page);
   };
 
-  const debounce = (func, delay) => {
-    let timeoutId;
-    return (...args) => {
-      if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        const [value] = args;
-        func(value === undefined || value.trim() === '' ? '' : value);
-      }, delay);
-    };
-  };
-
-  const handleSearch = debounce((value) => {
-    setFilters((prev) => ({ ...prev, email: value }));
-    setCurrentPage(1);
-  }, 150);
-
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
-    if (name === 'email') {
-      handleSearch(value);
-    } else {
-      setFilters((prev) => ({ ...prev, [name]: parseInt(value) }));
-      setCurrentPage(1);
-    }
+    setFilters((prev) => ({ ...prev, [name]: parseInt(value) }));
+    setCurrentPage(1);
   };
 
   const handleSaveEdit = async () => {
@@ -112,7 +97,11 @@ const UserList = () => {
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Chưa cập nhật';
-    return new Date(dateString).toLocaleDateString('vi-VN');
+    const dateRegex = /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\d{4}$/;
+    if (dateRegex.test(dateString)) {
+      return dateString;
+    }
+    return 'Chưa cập nhật';
   };
 
   const renderSkeleton = () => {
@@ -166,13 +155,12 @@ const UserList = () => {
       <div className="user-list__filters">
         <div className="user-list__search-bar">
           <input
-            ref={searchInputRef}
             type="text"
             lang="vi"
             name="email"
             placeholder="Tìm kiếm theo email..."
             value={filters.email}
-            onChange={handleFilterChange}
+            onChange={handleSearch}
             className="user-list__search-input"
           />
         </div>

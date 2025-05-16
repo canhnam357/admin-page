@@ -1,51 +1,55 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
-import { fetchDistributors, createDistributor, updateDistributor, resetDistributorState } from './distributorSlice';
+import { fetchDistributors, createDistributor, updateDistributor } from './distributorSlice';
 import './DistributorList.css';
+
+// Debounce utility function
+const debounce = (func, delay) => {
+  let timeoutId;
+  return (...args) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func(...args), delay);
+  };
+};
 
 const DistributorList = () => {
   const dispatch = useDispatch();
-  const { distributors, loading, error, action } = useSelector((state) => state.distributors);
+  const { distributors, loading, error } = useSelector((state) => state.distributors);
   const [currentPage, setCurrentPage] = useState(1);
   const [keyword, setKeyword] = useState('');
   const [createForm, setCreateForm] = useState({ distributorName: '', showModal: false });
   const [editDistributor, setEditDistributor] = useState(null);
-  const inputRef = useRef(null);
   const size = 10;
+
+  // Debounced search function
+  const debouncedFetchDistributors = useMemo(
+    () =>
+      debounce((value) => {
+        setKeyword(value);
+        setCurrentPage(1);
+        dispatch(fetchDistributors({ index: 1, size, keyword: value }));
+      }, 300),
+    [dispatch, size]
+  );
+
+  // Handle search input change
+  const handleSearch = (e) => {
+    const value = e.target.value;
+    setKeyword(value);
+    debouncedFetchDistributors(value);
+  };
 
   useEffect(() => {
     dispatch(fetchDistributors({ index: currentPage, size, keyword }));
   }, [dispatch, currentPage, keyword, size]);
 
   useEffect(() => {
-    if (!loading && action) {
-      if (error) {
-        if (action === 'fetch') {
-          toast.dismiss();
-          toast.error(`Lấy danh sách nhà phát hành thất bại: ${error}`);
-        } else if (action === 'create') {
-          toast.dismiss();
-          toast.error(`Tạo nhà phát hành thất bại: ${error}`);
-        } else if (action === 'update') {
-          toast.dismiss();
-          toast.error(`Sửa nhà phát hành thất bại: ${error}`);
-        }
-      } else {
-        if (action === 'create') {
-          toast.dismiss();
-          toast.success('Tạo nhà phát hành thành công!');
-        } else if (action === 'update') {
-          toast.dismiss();
-          toast.success('Sửa nhà phát hành thành công!');
-        }
-      }
+    if (error && error !== 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!') {
+      toast.dismiss();
+      toast.error(`Lỗi: ${error}`);
     }
-
-    return () => {
-      dispatch(resetDistributorState());
-    };
-  }, [loading, error, action, dispatch]);
+  }, [error]);
 
   const handleNextPage = () => {
     if (currentPage < distributors.totalPages) {
@@ -63,27 +67,6 @@ const DistributorList = () => {
     setCurrentPage(page);
   };
 
-  const debounce = (func, delay) => {
-    let timeoutId;
-    return (...args) => {
-      if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        const [value] = args;
-        func(value === undefined || value.trim() === '' ? '' : value);
-      }, delay);
-    };
-  };
-
-  const handleSearch = debounce((value) => {
-    setKeyword(value);
-    setCurrentPage(1);
-  }, 150);
-
-  const handleInputChange = (e) => {
-    const value = e.target.value;
-    handleSearch(value);
-  };
-
   const validateDistributorName = (name) => {
     if (!name.trim()) {
       toast.dismiss();
@@ -98,10 +81,18 @@ const DistributorList = () => {
     return true;
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (validateDistributorName(createForm.distributorName)) {
-      dispatch(createDistributor(createForm.distributorName));
-      setCreateForm({ distributorName: '', showModal: false });
+      try {
+        await dispatch(createDistributor(createForm.distributorName)).unwrap();
+        setCreateForm({ distributorName: '', showModal: false });
+        dispatch(fetchDistributors({ index: currentPage, size, keyword }));
+        toast.dismiss();
+        toast.success('Tạo nhà phát hành thành công!');
+      } catch (err) {
+        toast.dismiss();
+        toast.error(`Tạo nhà phát hành thất bại: ${err}`);
+      }
     }
   };
 
@@ -109,10 +100,20 @@ const DistributorList = () => {
     setEditDistributor({ ...distributor });
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (editDistributor && validateDistributorName(editDistributor.distributorName)) {
-      dispatch(updateDistributor({ distributorId: editDistributor.distributorId, distributorName: editDistributor.distributorName }));
-      setEditDistributor(null);
+      try {
+        await dispatch(
+          updateDistributor({ distributorId: editDistributor.distributorId, distributorName: editDistributor.distributorName })
+        ).unwrap();
+        setEditDistributor(null);
+        dispatch(fetchDistributors({ index: currentPage, size, keyword }));
+        toast.dismiss();
+        toast.success('Cập nhật nhà phát hành thành công!');
+      } catch (err) {
+        toast.dismiss();
+        toast.error(`Cập nhật nhà phát hành thất bại: ${err}`);
+      }
     }
   };
 
@@ -164,12 +165,11 @@ const DistributorList = () => {
         </div>
         <div className="distributor__search-bar">
           <input
-            ref={inputRef}
             type="text"
             lang="vi"
             placeholder="Tìm kiếm nhà phát hành..."
             value={keyword}
-            onChange={handleInputChange}
+            onChange={handleSearch}
             className="distributor__search-input"
           />
         </div>

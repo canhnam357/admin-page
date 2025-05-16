@@ -15,6 +15,7 @@ import DistributorList from './features/distributors/DistributorList';
 import CategoryList from './features/categories/CategoryList';
 import BookTypeList from './features/book-types/BookTypeList';
 import OrderStatus from './features/order-status/OrderStatus';
+import RefundStatus from './features/refundStatus/RefundStatus'
 import './App.css';
 
 const App = () => {
@@ -34,6 +35,7 @@ const App = () => {
               <Route path="categories" element={<CategoryList />} />
               <Route path="book-types" element={<BookTypeList />} />
               <Route path="order-status" element={<OrderStatus />} />
+              <Route path="refund-status" element={<RefundStatus />} />
             </Route>
             <Route path="/" element={<Login />} />
           </Routes>

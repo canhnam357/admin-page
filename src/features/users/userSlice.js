@@ -4,12 +4,15 @@ import { logoutUser } from '../auth/authSlice';
 
 export const fetchUsers = createAsyncThunk(
   'users/fetchUsers',
-  async ({ index = 1, size = 10, email = '', isActive = 2, isVerified = 2 }, { rejectWithValue, dispatch }) => {
+  async ({ index = 1, size = 10, email = '', isActive = 2, isVerified = 2 }, { rejectWithValue, dispatch, getState }) => {
+    const state = getState().users;
+    const newRequestId = state.currentUsersRequestId + 1;
+    dispatch(setUsersRequestId(newRequestId));
     try {
       const response = await api.get('/admin/users', {
         params: { index, size, email, isActive, isVerified },
       });
-      return response.data.result;
+      return { data: response.data.result, requestId: newRequestId };
     } catch (error) {
       if (error.response?.status === 401) {
         dispatch(logoutUser());
@@ -46,53 +49,46 @@ const userSlice = createSlice({
     users: { content: [], totalPages: 1, totalElements: 0 },
     loading: false,
     error: null,
-    action: null,
+    currentUsersRequestId: 0,
   },
   reducers: {
-    resetUserState: (state) => {
-      state.error = null;
-      state.action = null;
+    setUsersRequestId: (state, action) => {
+      state.currentUsersRequestId = action.payload;
     },
   },
   extraReducers: (builder) => {
     builder
       .addCase(fetchUsers.pending, (state) => {
         state.loading = true;
-        state.action = 'fetch';
-        console.log('fetchUsers pending - action:', state.action); // Debug
+        state.error = null;
       })
       .addCase(fetchUsers.fulfilled, (state, action) => {
-        state.loading = false;
-        state.users = action.payload;
-        state.error = null;
-        state.action = 'fetch'; // Đặt action để đảm bảo toast hiển thị
-        console.log('fetchUsers fulfilled - action:', state.action, 'users:', state.users); // Debug
+        const { data, requestId } = action.payload;
+        if (requestId === state.currentUsersRequestId) {
+          state.loading = false;
+          state.users = data;
+          state.error = null;
+        }
       })
       .addCase(fetchUsers.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        state.action = 'fetch';
-        console.log('fetchUsers rejected - error:', state.error, 'action:', state.action); // Debug
+        state.users = { content: [], totalPages: 0, totalElements: 0 };
       })
       .addCase(updateUserStatus.pending, (state) => {
         state.loading = true;
-        state.action = 'update';
-        console.log('updateUserStatus pending - action:', state.action); // Debug
+        state.error = null;
       })
       .addCase(updateUserStatus.fulfilled, (state) => {
         state.loading = false;
         state.error = null;
-        state.action = 'update'; // Đặt action để đảm bảo toast hiển thị
-        console.log('updateUserStatus fulfilled - action:', state.action); // Debug
       })
       .addCase(updateUserStatus.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        state.action = 'update';
-        console.log('updateUserStatus rejected - error:', state.error, 'action:', state.action); // Debug
       });
   },
 });
 
-export const { resetUserState } = userSlice.actions;
+export const { setUsersRequestId } = userSlice.actions;
 export default userSlice.reducer;

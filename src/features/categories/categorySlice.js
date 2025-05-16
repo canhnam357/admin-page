@@ -1,15 +1,18 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../../api/api';
-import { logoutUser } from '../auth/authSlice'; // Import logoutUser
+import { logoutUser } from '../auth/authSlice';
 
 export const fetchCategories = createAsyncThunk(
   'categories/fetchCategories',
-  async ({ keyword = '' }, { rejectWithValue, dispatch }) => {
+  async ({ keyword = '' }, { rejectWithValue, dispatch, getState }) => {
+    const state = getState().categories;
+    const newRequestId = state.currentCategoriesRequestId + 1;
+    dispatch(setCategoriesRequestId(newRequestId));
     try {
       const response = await api.get('/admin/categories', {
         params: { keyword },
       });
-      return response.data.result;
+      return { data: response.data.result, requestId: newRequestId };
     } catch (error) {
       if (error.response?.status === 401) {
         dispatch(logoutUser());
@@ -82,12 +85,11 @@ const categorySlice = createSlice({
     categories: [],
     loading: false,
     error: null,
-    action: null,
+    currentCategoriesRequestId: 0,
   },
   reducers: {
-    resetCategoryState: (state) => {
-      state.error = null;
-      state.action = null;
+    setCategoriesRequestId: (state, action) => {
+      state.currentCategoriesRequestId = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -95,37 +97,36 @@ const categorySlice = createSlice({
       .addCase(fetchCategories.pending, (state) => {
         state.loading = true;
         state.error = null;
-        state.action = 'fetch';
       })
       .addCase(fetchCategories.fulfilled, (state, action) => {
-        state.loading = false;
-        state.categories = action.payload;
-        state.action = 'fetch';
+        const { data, requestId } = action.payload;
+        if (requestId === state.currentCategoriesRequestId) {
+          state.loading = false;
+          state.categories = data;
+          state.error = null;
+        }
       })
       .addCase(fetchCategories.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        state.action = 'fetch';
+        state.categories = [];
       })
       .addCase(createCategory.pending, (state) => {
         state.loading = true;
         state.error = null;
-        state.action = 'create';
       })
       .addCase(createCategory.fulfilled, (state, action) => {
         state.loading = false;
         state.categories.push(action.payload);
-        state.action = 'create';
+        state.error = null;
       })
       .addCase(createCategory.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        state.action = 'create';
       })
       .addCase(updateCategory.pending, (state) => {
         state.loading = true;
         state.error = null;
-        state.action = 'update';
       })
       .addCase(updateCategory.fulfilled, (state, action) => {
         state.loading = false;
@@ -133,32 +134,29 @@ const categorySlice = createSlice({
           (category) => category.categoryId === action.payload.categoryId
         );
         if (index !== -1) state.categories[index] = action.payload;
-        state.action = 'update';
+        state.error = null;
       })
       .addCase(updateCategory.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        state.action = 'update';
       })
       .addCase(deleteCategory.pending, (state) => {
         state.loading = true;
         state.error = null;
-        state.action = 'delete';
       })
       .addCase(deleteCategory.fulfilled, (state, action) => {
         state.loading = false;
         state.categories = state.categories.filter(
           (category) => category.categoryId !== action.payload
         );
-        state.action = 'delete';
+        state.error = null;
       })
       .addCase(deleteCategory.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        state.action = 'delete';
       });
   },
 });
 
-export const { resetCategoryState } = categorySlice.actions;
+export const { setCategoriesRequestId } = categorySlice.actions;
 export default categorySlice.reducer;

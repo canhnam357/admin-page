@@ -1,60 +1,69 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
-import { fetchAuthors, createAuthor, updateAuthor, resetAuthorState } from './authorSlice';
-import api from '../../api/api';
+import { fetchAuthors, createAuthor, updateAuthor, fetchAuthorBooks } from './authorSlice';
 import './AuthorList.css';
+
+// Debounce utility function
+const debounce = (func, delay) => {
+  let timeoutId;
+  return (...args) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func(...args), delay);
+  };
+};
 
 const AuthorList = () => {
   const dispatch = useDispatch();
-  const { authors, loading, error } = useSelector((state) => state.authors);
+  const { authors, authorBooks, loading, error } = useSelector((state) => state.authors);
   const [currentPage, setCurrentPage] = useState(1);
   const [keyword, setKeyword] = useState('');
   const [createForm, setCreateForm] = useState({ authorName: '', showModal: false });
   const [editAuthor, setEditAuthor] = useState(null);
   const [viewAuthorId, setViewAuthorId] = useState(null);
-  const [authorBooks, setAuthorBooks] = useState({ content: [], totalPages: 0, totalElements: 0 });
   const [currentBookPage, setCurrentBookPage] = useState(1);
-  const inputRef = useRef(null);
   const size = 10;
+
+  // Debounced search function
+  const debouncedFetchAuthors = useMemo(
+    () =>
+      debounce((value) => {
+        setKeyword(value);
+        setCurrentPage(1);
+        dispatch(fetchAuthors({ index: 1, size, keyword: value }));
+      }, 300),
+    [dispatch, size]
+  );
+
+  // Handle search input change
+  const handleSearch = (e) => {
+    const value = e.target.value;
+    setKeyword(value);
+    debouncedFetchAuthors(value);
+  };
 
   useEffect(() => {
     dispatch(fetchAuthors({ index: currentPage, size, keyword }));
   }, [dispatch, currentPage, keyword, size]);
 
   useEffect(() => {
-    const fetchBooks = async () => {
-      if (viewAuthorId) {
-        try {
-          const response = await api.get(`/admin/books/author_books/${viewAuthorId}`, {
-            params: { index: currentBookPage, size },
-          });
-          setAuthorBooks(response.data.result || { content: [], totalPages: 0, totalElements: 0 });
-          toast.dismiss();
-          toast.success('Lấy danh sách sách thành công!');
-        } catch (err) {
-          setAuthorBooks({ content: [], totalPages: 0, totalElements: 0 });
-          toast.dismiss();
-          toast.error(`Lấy danh sách sách thất bại: ${err.response?.data?.message || err.message}`);
-        }
-      }
-    };
-    fetchBooks();
-  }, [viewAuthorId, currentBookPage]);
+    if (viewAuthorId) {
+      dispatch(fetchAuthorBooks({ authorId: viewAuthorId, index: currentBookPage, size }));
+    }
+  }, [viewAuthorId, currentBookPage, dispatch, size]);
+
+  useEffect(() => {
+    if (error && error !== 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!') {
+      toast.dismiss();
+      toast.error(`Lỗi: ${error}`);
+    }
+  }, [error]);
 
   useEffect(() => {
     if (authorBooks.totalPages > 0 && currentBookPage > authorBooks.totalPages) {
       setCurrentBookPage(authorBooks.totalPages);
     }
   }, [authorBooks.totalPages, currentBookPage]);
-
-  // Hiển thị toast lỗi khi fetchAuthors thất bại (trừ lỗi 401)
-  useEffect(() => {
-    if (error && error !== 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!') {
-      toast.dismiss();
-      toast.error(`Lấy danh sách tác giả thất bại: ${error}`);
-    }
-  }, [error]);
 
   const handleNextPage = () => {
     if (currentPage < authors.totalPages) {
@@ -70,27 +79,6 @@ const AuthorList = () => {
 
   const handlePageClick = (page) => {
     setCurrentPage(page);
-  };
-
-  const debounce = (func, delay) => {
-    let timeoutId;
-    return (...args) => {
-      if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        const [value] = args;
-        func(value === undefined || value.trim() === '' ? '' : value);
-      }, delay);
-    };
-  };
-
-  const handleSearch = debounce((value) => {
-    setKeyword(value);
-    setCurrentPage(1);
-  }, 150);
-
-  const handleInputChange = (e) => {
-    const value = e.target.value;
-    handleSearch(value);
   };
 
   const validateAuthorName = (name) => {
@@ -110,15 +98,14 @@ const AuthorList = () => {
   const handleCreate = async () => {
     if (validateAuthorName(createForm.authorName)) {
       try {
-        const result = await dispatch(createAuthor(createForm.authorName)).unwrap();
-        console.log('createAuthor result:', result); // Debug
+        await dispatch(createAuthor(createForm.authorName)).unwrap();
         setCreateForm({ authorName: '', showModal: false });
+        dispatch(fetchAuthors({ index: currentPage, size, keyword }));
         toast.dismiss();
         toast.success('Tạo tác giả thành công!');
       } catch (err) {
-        console.log('createAuthor error:', err); // Debug
         toast.dismiss();
-        toast.error(`Tạo tác giả thất bại: ${err.message || err}`);
+        toast.error(`Tạo tác giả thất bại: ${err}`);
       }
     }
   };
@@ -137,24 +124,37 @@ const AuthorList = () => {
       try {
         await dispatch(updateAuthor({ authorId: editAuthor.authorId, authorName: editAuthor.authorName })).unwrap();
         setEditAuthor(null);
+        dispatch(fetchAuthors({ index: currentPage, size, keyword }));
         toast.dismiss();
         toast.success('Cập nhật thông tin tác giả thành công!');
       } catch (err) {
         toast.dismiss();
         toast.error(`Cập nhật thông tin tác giả thất bại: ${err}`);
       }
-    } else {
-      toast.dismiss();
-      toast.error('Tên tác giả không hợp lệ!');
     }
   };
 
-  const renderSkeleton = () => {
-    return Array.from({ length: size }).map((_, index) => (
-      <tr key={index} className="author__table-row--loading">
-        <td><div className="author__skeleton author__skeleton--text"></div></td>
-        <td><div className="author__skeleton author__skeleton--text"></div></td>
-        <td><div className="author__skeleton author__skeleton--text"></div></td>
+  const renderSkeleton = (isBooks = false) => {
+    const length = isBooks ? 5 : size;
+    return Array.from({ length }).map((_, index) => (
+      <tr key={index} className={isBooks ? 'author__books-table-row--loading' : 'author__table-row--loading'}>
+        {isBooks ? (
+          <>
+            <td><div className="author__skeleton author__skeleton--text"></div></td>
+            <td><div className="author__skeleton author__skeleton--text"></div></td>
+            <td><div className="author__skeleton author__skeleton--text"></div></td>
+            <td><div className="author__skeleton author__skeleton--text"></div></td>
+            <td><div className="author__skeleton author__skeleton--text"></div></td>
+            <td><div className="author__skeleton author__skeleton--text"></div></td>
+            <td><div className="author__skeleton author__skeleton--image"></div></td>
+          </>
+        ) : (
+          <>
+            <td><div className="author__skeleton author__skeleton--text"></div></td>
+            <td><div className="author__skeleton author__skeleton--text"></div></td>
+            <td><div className="author__skeleton author__skeleton--text"></div></td>
+          </>
+        )}
       </tr>
     ));
   };
@@ -195,12 +195,11 @@ const AuthorList = () => {
         </div>
         <div className="author__search-bar">
           <input
-            ref={inputRef}
             type="text"
             lang="vi"
             placeholder="Tìm kiếm tác giả..."
             value={keyword}
-            onChange={handleInputChange}
+            onChange={handleSearch}
             className="author__search-input"
           />
         </div>
@@ -214,7 +213,7 @@ const AuthorList = () => {
           </tr>
         </thead>
         <tbody>
-          {loading ? (
+          {loading && !viewAuthorId ? (
             renderSkeleton()
           ) : error ? (
             <tr><td colSpan="3" className="author__empty">Lỗi: {error}</td></tr>
@@ -293,9 +292,9 @@ const AuthorList = () => {
         </div>
       )}
       {editAuthor && (
-        <div className="author__modal" onClick={() => { setEditAuthor(null); dispatch(resetAuthorState()); }}>
+        <div className="author__modal" onClick={() => setEditAuthor(null)}>
           <div className="author__modal-content" onClick={(e) => e.stopPropagation()}>
-            <span className="author__modal-close" onClick={() => { setEditAuthor(null); dispatch(resetAuthorState()); }}>
+            <span className="author__modal-close" onClick={() => setEditAuthor(null)}>
               ×
             </span>
             <h3 className="author__modal-title">Chỉnh sửa tác giả</h3>
@@ -316,9 +315,9 @@ const AuthorList = () => {
         </div>
       )}
       {viewAuthorId && (
-        <div className="author__modal" onClick={() => setViewAuthorId(null)}>
+        <div className="author__modal" onClick={() => { setViewAuthorId(null); setCurrentBookPage(1); }}>
           <div className="author__modal-content author__books-modal" onClick={(e) => e.stopPropagation()}>
-            <span className="author__modal-close" onClick={() => setViewAuthorId(null)}>
+            <span className="author__modal-close" onClick={() => { setViewAuthorId(null); setCurrentBookPage(1); }}>
               ×
             </span>
             <h3 className="author__modal-title">
@@ -327,25 +326,21 @@ const AuthorList = () => {
             <table className="author__books-table">
               <thead>
                 <tr>
+                  <th>Thumbnail</th>
                   <th>Tên sách</th>
                   <th>Giá</th>
                   <th>Số trang</th>
                   <th>Nhà xuất bản</th>
                   <th>Nhà phát hành</th>
                   <th>Loại sách</th>
-                  <th>Thumbnail</th>
                 </tr>
               </thead>
               <tbody>
-                {authorBooks.content && authorBooks.content.length > 0 ? (
+                {loading ? (
+                  renderSkeleton(true)
+                ) : authorBooks.content && authorBooks.content.length > 0 ? (
                   authorBooks.content.map((book) => (
                     <tr key={book.bookId} className="author__table-row">
-                      <td>{book.bookName}</td>
-                      <td>{book.price.toLocaleString()} VNĐ</td>
-                      <td>{book.numberOfPage}</td>
-                      <td>{book.publisherName}</td>
-                      <td>{book.contributorName}</td>
-                      <td>{book.bookType}</td>
                       <td>
                         {book.urlThumbnail ? (
                           <img
@@ -358,6 +353,12 @@ const AuthorList = () => {
                           'Không có ảnh'
                         )}
                       </td>
+                      <td>{book.bookName}</td>
+                      <td>{book.price.toLocaleString('vi-VN')} VNĐ</td>
+                      <td>{book.numberOfPage}</td>
+                      <td>{book.publisherName}</td>
+                      <td>{book.contributorName}</td>
+                      <td>{book.bookType}</td>
                     </tr>
                   ))
                 ) : (
@@ -369,7 +370,7 @@ const AuthorList = () => {
               <button
                 className="author__pagination-button"
                 onClick={() => setCurrentBookPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentBookPage === 1 || authorBooks.totalPages === 0}
+                disabled={currentBookPage === 1 || loading || authorBooks.totalPages === 0}
               >
                 Trang trước
               </button>
@@ -383,6 +384,7 @@ const AuthorList = () => {
                     key={page}
                     className={`author__pagination-button ${currentBookPage === page ? 'author__pagination-button--active' : ''}`}
                     onClick={() => setCurrentBookPage(page)}
+                    disabled={loading}
                   >
                     {page}
                   </button>
@@ -391,7 +393,7 @@ const AuthorList = () => {
               <button
                 className="author__pagination-button"
                 onClick={() => setCurrentBookPage(prev => Math.min(prev + 1, authorBooks.totalPages || 1))}
-                disabled={currentBookPage === authorBooks.totalPages || authorBooks.totalPages === 0}
+                disabled={currentBookPage === authorBooks.totalPages || loading || authorBooks.totalPages === 0}
               >
                 Trang sau
               </button>

@@ -1,69 +1,52 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
-import { fetchCategories, createCategory, updateCategory, resetCategoryState } from './categorySlice';
+import { fetchCategories, createCategory, updateCategory } from './categorySlice';
 import './CategoryList.css';
+
+// Debounce utility function
+const debounce = (func, delay) => {
+  let timeoutId;
+  return (...args) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func(...args), delay);
+  };
+};
 
 const CategoryList = () => {
   const dispatch = useDispatch();
-  const { categories, loading, error, action } = useSelector((state) => state.categories);
+  const { categories, loading, error } = useSelector((state) => state.categories);
   const [keyword, setKeyword] = useState('');
   const [createForm, setCreateForm] = useState({ categoryName: '', showModal: false });
   const [editCategory, setEditCategory] = useState(null);
-  const inputRef = useRef(null);
+
+  // Debounced search function
+  const debouncedFetchCategories = useMemo(
+    () =>
+      debounce((value) => {
+        setKeyword(value);
+        dispatch(fetchCategories({ keyword: value }));
+      }, 300),
+    [dispatch]
+  );
+
+  // Handle search input change
+  const handleSearch = (e) => {
+    const value = e.target.value;
+    setKeyword(value);
+    debouncedFetchCategories(value);
+  };
 
   useEffect(() => {
     dispatch(fetchCategories({ keyword }));
   }, [dispatch, keyword]);
 
   useEffect(() => {
-    if (!loading && action) {
-      if (error) {
-        if (action === 'fetch') {
-          toast.dismiss();
-          toast.error(`Lấy danh sách thể loại thất bại: ${error}`);
-        } else if (action === 'create') {
-          toast.dismiss();
-          toast.error(`Tạo thể loại thất bại: ${error}`);
-        } else if (action === 'update') {
-          toast.dismiss();
-          toast.error(`Sửa thể loại thất bại: ${error}`);
-        }
-      } else {
-        if (action === 'create') {
-          toast.dismiss();
-          toast.success('Tạo thể loại thành công!');
-        } else if (action === 'update') {
-          toast.dismiss();
-          toast.success('Sửa thể loại thành công!');
-        }
-      }
+    if (error && error !== 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!') {
+      toast.dismiss();
+      toast.error(`Lỗi: ${error}`);
     }
-
-    return () => {
-      dispatch(resetCategoryState());
-    };
-  }, [loading, error, action, dispatch]);
-
-  const debounce = (func, delay) => {
-    let timeoutId;
-    return (...args) => {
-      if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        const [value] = args;
-        func(value === undefined || value.trim() === '' ? '' : value);
-      }, delay);
-    };
-  };
-
-  const handleSearch = debounce((value) => {
-    setKeyword(value);
-  }, 150);
-
-  const handleInputChange = (e) => {
-    const value = e.target.value;
-    handleSearch(value);
-  };
+  }, [error]);
 
   const validateCategoryName = (name) => {
     if (!name.trim()) {
@@ -79,10 +62,18 @@ const CategoryList = () => {
     return true;
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (validateCategoryName(createForm.categoryName)) {
-      dispatch(createCategory(createForm.categoryName));
-      setCreateForm({ categoryName: '', showModal: false });
+      try {
+        await dispatch(createCategory(createForm.categoryName)).unwrap();
+        setCreateForm({ categoryName: '', showModal: false });
+        dispatch(fetchCategories({ keyword }));
+        toast.dismiss();
+        toast.success('Tạo thể loại thành công!');
+      } catch (err) {
+        toast.dismiss();
+        toast.error(`Tạo thể loại thất bại: ${err}`);
+      }
     }
   };
 
@@ -90,10 +81,20 @@ const CategoryList = () => {
     setEditCategory({ ...category });
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (editCategory && validateCategoryName(editCategory.categoryName)) {
-      dispatch(updateCategory({ categoryId: editCategory.categoryId, categoryName: editCategory.categoryName }));
-      setEditCategory(null);
+      try {
+        await dispatch(
+          updateCategory({ categoryId: editCategory.categoryId, categoryName: editCategory.categoryName })
+        ).unwrap();
+        setEditCategory(null);
+        dispatch(fetchCategories({ keyword }));
+        toast.dismiss();
+        toast.success('Cập nhật thể loại thành công!');
+      } catch (err) {
+        toast.dismiss();
+        toast.error(`Cập nhật thể loại thất bại: ${err}`);
+      }
     }
   };
 
@@ -116,12 +117,11 @@ const CategoryList = () => {
         </div>
         <div className="category__search-bar">
           <input
-            ref={inputRef}
             type="text"
             lang="vi"
             placeholder="Tìm kiếm thể loại..."
             value={keyword}
-            onChange={handleInputChange}
+            onChange={handleSearch}
             className="category__search-input"
           />
         </div>
@@ -139,7 +139,7 @@ const CategoryList = () => {
             renderSkeleton()
           ) : error ? (
             <tr><td colSpan="3" className="category__empty">Lỗi: {error}</td></tr>
-          ) : categories.length > 0 ? (
+          ) : categories && categories.length > 0 ? (
             categories.map((category) => (
               <tr key={category.categoryId} className="category__table-row">
                 <td>{category.categoryId}</td>

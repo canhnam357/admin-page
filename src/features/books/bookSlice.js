@@ -4,12 +4,15 @@ import { logoutUser } from '../auth/authSlice';
 
 export const fetchBooks = createAsyncThunk(
   'books/fetchBooks',
-  async ({ index = 1, size = 10, keyword = '' }, { rejectWithValue, dispatch }) => {
+  async ({ index = 1, size = 10, keyword = '' }, { rejectWithValue, dispatch, getState }) => {
+    const state = getState().books;
+    const newRequestId = state.currentBooksRequestId + 1;
+    dispatch(setBooksRequestId(newRequestId));
     try {
       const response = await api.get('/admin/books', {
         params: { index, size, keyword },
       });
-      return response.data.result;
+      return { data: response.data.result, requestId: newRequestId };
     } catch (error) {
       if (error.response?.status === 401) {
         dispatch(logoutUser());
@@ -109,11 +112,15 @@ const bookSlice = createSlice({
     books: { content: [], totalPages: 0, totalElements: 0 },
     loading: false,
     error: null,
+    currentBooksRequestId: 0,
   },
   reducers: {
     resetBookState: (state) => {
       state.loading = false;
       state.error = null;
+    },
+    setBooksRequestId: (state, action) => {
+      state.currentBooksRequestId = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -122,55 +129,58 @@ const bookSlice = createSlice({
       .addCase(fetchBooks.pending, (state) => {
         state.loading = true;
         state.error = null;
-        console.log('fetchBooks pending'); // Debug
+        console.log('fetchBooks pending');
       })
       .addCase(fetchBooks.fulfilled, (state, action) => {
-        state.loading = false;
-        state.books = action.payload;
-        console.log('fetchBooks fulfilled - books:', state.books); // Debug
+        const { data, requestId } = action.payload;
+        if (requestId === state.currentBooksRequestId) {
+          state.loading = false;
+          state.books = data;
+          console.log('fetchBooks fulfilled - books:', state.books);
+        }
       })
       .addCase(fetchBooks.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
         state.books = { content: [], totalPages: 0, totalElements: 0 };
-        console.log('fetchBooks rejected - error:', state.error); // Debug
+        console.log('fetchBooks rejected - error:', state.error);
       })
       // Create Book
       .addCase(createBook.pending, (state) => {
         state.loading = true;
         state.error = null;
-        console.log('createBook pending'); // Debug
+        console.log('createBook pending');
       })
       .addCase(createBook.fulfilled, (state, action) => {
         state.loading = false;
-        state.books.content.push(action.payload); // Thêm sách mới vào state
-        state.books.totalElements += 1; // Tăng tổng số phần tử
-        console.log('createBook fulfilled - payload:', action.payload); // Debug
+        state.books.content.push(action.payload);
+        state.books.totalElements += 1;
+        console.log('createBook fulfilled - payload:', action.payload);
       })
       .addCase(createBook.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        console.log('createBook rejected - error:', state.error); // Debug
+        console.log('createBook rejected - error:', state.error);
       })
       // Update Book
       .addCase(updateBook.pending, (state) => {
         state.loading = true;
         state.error = null;
-        console.log('updateBook pending'); // Debug
+        console.log('updateBook pending');
       })
       .addCase(updateBook.fulfilled, (state, action) => {
         state.loading = false;
         const index = state.books.content.findIndex((book) => book.bookId === action.payload.bookId);
-        if (index !== -1) state.books.content[index] = action.payload; // Cập nhật sách trong state
-        console.log('updateBook fulfilled - payload:', action.payload); // Debug
+        if (index !== -1) state.books.content[index] = action.payload;
+        console.log('updateBook fulfilled - payload:', action.payload);
       })
       .addCase(updateBook.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        console.log('updateBook rejected - error:', state.error); // Debug
+        console.log('updateBook rejected - error:', state.error);
       });
   },
 });
 
-export const { resetBookState } = bookSlice.actions;
+export const { resetBookState, setBooksRequestId } = bookSlice.actions;
 export default bookSlice.reducer;

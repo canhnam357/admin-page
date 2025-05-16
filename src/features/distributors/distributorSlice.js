@@ -1,15 +1,18 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../../api/api';
-import { logoutUser } from '../auth/authSlice'; // Import logoutUser
+import { logoutUser } from '../auth/authSlice';
 
 export const fetchDistributors = createAsyncThunk(
   'distributors/fetchDistributors',
-  async ({ index = 1, size = 10, keyword = '' }, { rejectWithValue, dispatch }) => {
+  async ({ index = 1, size = 10, keyword = '' }, { rejectWithValue, dispatch, getState }) => {
+    const state = getState().distributors;
+    const newRequestId = state.currentDistributorsRequestId + 1;
+    dispatch(setDistributorsRequestId(newRequestId));
     try {
       const response = await api.get('/admin/distributors', {
         params: { index, size, keyword },
       });
-      return response.data.result;
+      return { data: response.data.result, requestId: newRequestId };
     } catch (error) {
       if (error.response?.status === 401) {
         dispatch(logoutUser());
@@ -82,12 +85,11 @@ const distributorSlice = createSlice({
     distributors: { content: [], totalPages: 0, totalElements: 0 },
     loading: false,
     error: null,
-    action: null,
+    currentDistributorsRequestId: 0,
   },
   reducers: {
-    resetDistributorState: (state) => {
-      state.error = null;
-      state.action = null;
+    setDistributorsRequestId: (state, action) => {
+      state.currentDistributorsRequestId = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -95,38 +97,37 @@ const distributorSlice = createSlice({
       .addCase(fetchDistributors.pending, (state) => {
         state.loading = true;
         state.error = null;
-        state.action = 'fetch';
       })
       .addCase(fetchDistributors.fulfilled, (state, action) => {
-        state.loading = false;
-        state.distributors = action.payload;
-        state.action = 'fetch';
+        const { data, requestId } = action.payload;
+        if (requestId === state.currentDistributorsRequestId) {
+          state.loading = false;
+          state.distributors = data;
+          state.error = null;
+        }
       })
       .addCase(fetchDistributors.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        state.action = 'fetch';
+        state.distributors = { content: [], totalPages: 0, totalElements: 0 };
       })
       .addCase(createDistributor.pending, (state) => {
         state.loading = true;
         state.error = null;
-        state.action = 'create';
       })
       .addCase(createDistributor.fulfilled, (state, action) => {
         state.loading = false;
         state.distributors.content.push(action.payload);
         state.distributors.totalElements += 1;
-        state.action = 'create';
+        state.error = null;
       })
       .addCase(createDistributor.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        state.action = 'create';
       })
       .addCase(updateDistributor.pending, (state) => {
         state.loading = true;
         state.error = null;
-        state.action = 'update';
       })
       .addCase(updateDistributor.fulfilled, (state, action) => {
         state.loading = false;
@@ -134,17 +135,15 @@ const distributorSlice = createSlice({
           (distributor) => distributor.distributorId === action.payload.distributorId
         );
         if (index !== -1) state.distributors.content[index] = action.payload;
-        state.action = 'update';
+        state.error = null;
       })
       .addCase(updateDistributor.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        state.action = 'update';
       })
       .addCase(deleteDistributor.pending, (state) => {
         state.loading = true;
         state.error = null;
-        state.action = 'delete';
       })
       .addCase(deleteDistributor.fulfilled, (state, action) => {
         state.loading = false;
@@ -152,15 +151,14 @@ const distributorSlice = createSlice({
           (distributor) => distributor.distributorId !== action.payload
         );
         state.distributors.totalElements -= 1;
-        state.action = 'delete';
+        state.error = null;
       })
       .addCase(deleteDistributor.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        state.action = 'delete';
       });
   },
 });
 
-export const { resetDistributorState } = distributorSlice.actions;
+export const { setDistributorsRequestId } = distributorSlice.actions;
 export default distributorSlice.reducer;

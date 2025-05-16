@@ -51,6 +51,11 @@ const Sidebar = () => {
             Quản lý trạng thái đơn hàng
           </NavLink>
         </li>
+        <li className="admin-sidebar__item">
+          <NavLink to="/refund-status" className={({ isActive }) => (isActive ? 'admin-sidebar__link admin-sidebar__link--active' : 'admin-sidebar__link')}>
+            Quản lý trạng thái hoàn tiền
+          </NavLink>
+        </li>
       </ul>
     </nav>
   );
