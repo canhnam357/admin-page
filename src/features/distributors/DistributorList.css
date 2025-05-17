@@ -112,6 +112,12 @@
   height: 16px;
 }
 
+.distributor__skeleton--image {
+  width: 50px;
+  height: 50px;
+  border-radius: 4px;
+}
+
 .distributor__action-button {
   padding: 6px 12px;
   background-color: #3b82f6;
@@ -121,10 +127,19 @@
   cursor: pointer;
   font-family: 'Inter', sans-serif;
   transition: background-color 0.3s ease;
+  margin-right: 8px;
+}
+
+.distributor__action-button--view {
+  background-color: #10b981;
 }
 
 .distributor__action-button:hover {
   background-color: #2563eb;
+}
+
+.distributor__action-button--view:hover {
+  background-color: #059669;
 }
 
 .distributor__pagination {
@@ -188,6 +203,10 @@
   max-height: 80vh;
   overflow-y: auto;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.distributor__books-modal {
+  width: 900px;
 }
 
 .distributor__modal-close {
@@ -256,6 +275,49 @@
   padding: 20px;
   color: #4a5568;
   font-family: 'Inter', sans-serif;
+}
+
+.distributor__books-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.distributor__books-table th,
+.distributor__books-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.distributor__books-table th {
+  background-color: #f8fafc;
+  font-weight: 600;
+  color: #2d3748;
+  font-family: 'Inter', sans-serif;
+}
+
+.distributor__books-table-row--loading td {
+  height: 40px;
+}
+
+.distributor__book-thumbnail {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.distributor__books-pagination {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 16px;
 }
 
 @keyframes pulse {

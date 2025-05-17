@@ -79,17 +79,48 @@ export const deletePublisher = createAsyncThunk(
   }
 );
 
+export const fetchPublisherBooks = createAsyncThunk(
+  'publishers/fetchPublisherBooks',
+  async ({ publisherId, index = 1, size = 10 }, { rejectWithValue, dispatch, getState }) => {
+    const state = getState().publishers;
+    const newRequestId = state.currentBooksRequestId + 1;
+    dispatch(setBooksRequestId(newRequestId));
+    try {
+      const response = await api.get(`/admin/books/publisher_book/${publisherId}`, {
+        params: { index, size },
+      });
+      return { data: response.data.result, requestId: newRequestId };
+    } catch (error) {
+      if (error.response?.status === 401) {
+        dispatch(logoutUser());
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        return rejectWithValue('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
+      }
+      return rejectWithValue(error.response?.data?.message || 'Lỗi khi lấy danh sách sách');
+    }
+  }
+);
+
 const publisherSlice = createSlice({
   name: 'publishers',
   initialState: {
     publishers: { content: [], totalPages: 0, totalElements: 0 },
+    publisherBooks: { content: [], totalPages: 0, totalElements: 0 },
     loading: false,
     error: null,
     currentPublishersRequestId: 0,
+    currentBooksRequestId: 0,
   },
   reducers: {
     setPublishersRequestId: (state, action) => {
       state.currentPublishersRequestId = action.payload;
+    },
+    setBooksRequestId: (state, action) => {
+      state.currentBooksRequestId = action.payload;
+    },
+    resetPublisherBooks: (state) => {
+      state.publisherBooks = { content: [], totalPages: 0, totalElements: 0 };
     },
   },
   extraReducers: (builder) => {
@@ -156,9 +187,26 @@ const publisherSlice = createSlice({
       .addCase(deletePublisher.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+      })
+      .addCase(fetchPublisherBooks.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchPublisherBooks.fulfilled, (state, action) => {
+        const { data, requestId } = action.payload;
+        if (requestId === state.currentBooksRequestId) {
+          state.loading = false;
+          state.publisherBooks = data;
+          state.error = null;
+        }
+      })
+      .addCase(fetchPublisherBooks.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+        state.publisherBooks = { content: [], totalPages: 0, totalElements: 0 };
       });
   },
 });
 
-export const { setPublishersRequestId } = publisherSlice.actions;
+export const { setPublishersRequestId, setBooksRequestId, resetPublisherBooks } = publisherSlice.actions;
 export default publisherSlice.reducer;

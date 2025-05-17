@@ -79,17 +79,48 @@ export const deleteCategory = createAsyncThunk(
   }
 );
 
+export const fetchCategoryBooks = createAsyncThunk(
+  'categories/fetchCategoryBooks',
+  async ({ categoryId, index = 1, size = 5 }, { rejectWithValue, dispatch, getState }) => {
+    const state = getState().categories;
+    const newRequestId = state.currentBooksRequestId + 1;
+    dispatch(setBooksRequestId(newRequestId));
+    try {
+      const response = await api.get(`/admin/books/category_books/${categoryId}`, {
+        params: { index, size },
+      });
+      return { data: response.data.result, requestId: newRequestId };
+    } catch (error) {
+      if (error.response?.status === 401) {
+        dispatch(logoutUser());
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        return rejectWithValue('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
+      }
+      return rejectWithValue(error.response?.data?.message || 'Lỗi khi lấy danh sách sách');
+    }
+  }
+);
+
 const categorySlice = createSlice({
   name: 'categories',
   initialState: {
     categories: [],
+    categoryBooks: { content: [], totalPages: 0, totalElements: 0 },
     loading: false,
     error: null,
     currentCategoriesRequestId: 0,
+    currentBooksRequestId: 0,
   },
   reducers: {
     setCategoriesRequestId: (state, action) => {
       state.currentCategoriesRequestId = action.payload;
+    },
+    setBooksRequestId: (state, action) => {
+      state.currentBooksRequestId = action.payload;
+    },
+    resetCategoryBooks: (state) => {
+      state.categoryBooks = { content: [], totalPages: 0, totalElements: 0 };
     },
   },
   extraReducers: (builder) => {
@@ -154,9 +185,26 @@ const categorySlice = createSlice({
       .addCase(deleteCategory.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+      })
+      .addCase(fetchCategoryBooks.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchCategoryBooks.fulfilled, (state, action) => {
+        const { data, requestId } = action.payload;
+        if (requestId === state.currentBooksRequestId) {
+          state.loading = false;
+          state.categoryBooks = data;
+          state.error = null;
+        }
+      })
+      .addCase(fetchCategoryBooks.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+        state.categoryBooks = { content: [], totalPages: 0, totalElements: 0 };
       });
   },
 });
 
-export const { setCategoriesRequestId } = categorySlice.actions;
+export const { setCategoriesRequestId, setBooksRequestId, resetCategoryBooks } = categorySlice.actions;
 export default categorySlice.reducer;

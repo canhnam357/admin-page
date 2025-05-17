@@ -345,6 +345,14 @@ const BookList = () => {
   };
 
   const handleEdit = (book) => {
+    // Tìm chỉ số thumbnail dựa trên dữ liệu từ backend
+    let thumbnailIdx = 0; // Mặc định là 0 nếu không tìm thấy
+    if (book.images && book.images.length > 0) {
+      const thumbnailImage = book.images.find((img) => img.isThumbnail) || 
+                            book.images.find((img) => img.url === book.urlThumbnail);
+      thumbnailIdx = thumbnailImage ? book.images.indexOf(thumbnailImage) : 0;
+    }
+
     setEditForm({
       bookId: book.bookId,
       bookName: book.bookName,
@@ -358,7 +366,7 @@ const BookList = () => {
       publisherId: book.publisher.publisherId,
       distributorId: book.distributor.distributorId,
       bookTypeId: book.bookType.bookTypeId,
-      thumbnailIdx: 0,
+      thumbnailIdx: thumbnailIdx, // Sử dụng chỉ số thumbnail thực tế
       categoriesId: book.categories.map((cat) => cat.categoryId),
       images: [],
       newArrival: book.newArrival,
@@ -815,6 +823,7 @@ const BookList = () => {
               </div>
               <div className="book-list__detail-item"><strong>Tên sách:</strong> {viewBook.bookName}</div>
               <div className="book-list__detail-item"><strong>Số lượng:</strong> {viewBook.inStock}</div>
+              <div className="book-list__detail-item"><strong>Đã bán:</strong> {viewBook.soldQuantity}</div>
               <div className="book-list__detail-item"><strong>Giá:</strong> {viewBook.price.toLocaleString()} VNĐ</div>
               <div className="book-list__detail-item"><strong>Mô tả:</strong> <p>{viewBook.description || 'Không có mô tả'}</p></div>
               <div className="book-list__detail-item"><strong>Số trang:</strong> {viewBook.numberOfPage}</div>

@@ -23,6 +23,7 @@ const AuthorList = () => {
   const [viewAuthorId, setViewAuthorId] = useState(null);
   const [currentBookPage, setCurrentBookPage] = useState(1);
   const size = 10;
+  const bookSize = 5;
 
   // Debounced search function
   const debouncedFetchAuthors = useMemo(
@@ -48,9 +49,9 @@ const AuthorList = () => {
 
   useEffect(() => {
     if (viewAuthorId) {
-      dispatch(fetchAuthorBooks({ authorId: viewAuthorId, index: currentBookPage, size }));
+      dispatch(fetchAuthorBooks({ authorId: viewAuthorId, index: currentBookPage, size: bookSize }));
     }
-  }, [viewAuthorId, currentBookPage, dispatch, size]);
+  }, [viewAuthorId, currentBookPage, dispatch, bookSize]);
 
   useEffect(() => {
     if (error && error !== 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!') {
@@ -122,31 +123,34 @@ const AuthorList = () => {
   const handleSaveEdit = async () => {
     if (editAuthor && validateAuthorName(editAuthor.authorName)) {
       try {
-        await dispatch(updateAuthor({ authorId: editAuthor.authorId, authorName: editAuthor.authorName })).unwrap();
+        await dispatch(
+          updateAuthor({ authorId: editAuthor.authorId, authorName: editAuthor.authorName })
+        ).unwrap();
         setEditAuthor(null);
         dispatch(fetchAuthors({ index: currentPage, size, keyword }));
         toast.dismiss();
-        toast.success('Cập nhật thông tin tác giả thành công!');
+        toast.success('Cập nhật tác giả thành công!');
       } catch (err) {
         toast.dismiss();
-        toast.error(`Cập nhật thông tin tác giả thất bại: ${err}`);
+        toast.error(`Cập nhật tác giả thất bại: ${err}`);
       }
     }
   };
 
   const renderSkeleton = (isBooks = false) => {
-    const length = isBooks ? 5 : size;
+    const length = isBooks ? bookSize : size;
     return Array.from({ length }).map((_, index) => (
       <tr key={index} className={isBooks ? 'author__books-table-row--loading' : 'author__table-row--loading'}>
         {isBooks ? (
           <>
-            <td><div className="author__skeleton author__skeleton--text"></div></td>
-            <td><div className="author__skeleton author__skeleton--text"></div></td>
-            <td><div className="author__skeleton author__skeleton--text"></div></td>
-            <td><div className="author__skeleton author__skeleton--text"></div></td>
-            <td><div className="author__skeleton author__skeleton--text"></div></td>
-            <td><div className="author__skeleton author__skeleton--text"></div></td>
             <td><div className="author__skeleton author__skeleton--image"></div></td>
+            <td><div className="author__skeleton author__skeleton--text"></div></td>
+            <td><div className="author__skeleton author__skeleton--text"></div></td>
+            <td><div className="author__skeleton author__skeleton--text"></div></td>
+            <td><div className="author__skeleton author__skeleton--text"></div></td>
+            <td><div className="author__skeleton author__skeleton--text"></div></td>
+            <td><div className="author__skeleton author__skeleton--text"></div></td>
+            <td><div className="author__skeleton author__skeleton--text"></div></td>
           </>
         ) : (
           <>
@@ -159,19 +163,22 @@ const AuthorList = () => {
     ));
   };
 
-  const getPageNumbers = (totalPages) => {
+  const getPageNumbers = (totalPages, isBooks = false) => {
     const delta = 1;
     const range = [];
     const rangeWithDots = [];
-    const start = Math.max(2, currentPage - delta);
-    const end = Math.min(totalPages - 1, currentPage + delta);
+    const current = isBooks ? currentBookPage : currentPage;
+    const pages = totalPages || 1;
+
+    const start = Math.max(2, current - delta);
+    const end = Math.min(pages - 1, current + delta);
 
     range.push(1);
     for (let i = start; i <= end; i++) {
       range.push(i);
     }
-    if (totalPages > 1) {
-      range.push(totalPages);
+    if (pages > 1) {
+      range.push(pages);
     }
 
     let prevPage = null;
@@ -243,7 +250,7 @@ const AuthorList = () => {
         >
           Trang trước
         </button>
-        {getPageNumbers(authors.totalPages || 1).map((page, index) =>
+        {getPageNumbers(authors.totalPages).map((page, index) =>
           page === '...' ? (
             <span key={`ellipsis-${index}`} className="author__pagination-ellipsis">
               ...
@@ -330,9 +337,10 @@ const AuthorList = () => {
                   <th>Tên sách</th>
                   <th>Giá</th>
                   <th>Số trang</th>
+                  <th>Tác giả</th>
                   <th>Nhà xuất bản</th>
                   <th>Nhà phát hành</th>
-                  <th>Loại sách</th>
+                  <th>Thể loại</th>
                 </tr>
               </thead>
               <tbody>
@@ -356,13 +364,14 @@ const AuthorList = () => {
                       <td>{book.bookName}</td>
                       <td>{book.price.toLocaleString('vi-VN')} VNĐ</td>
                       <td>{book.numberOfPage}</td>
-                      <td>{book.publisherName}</td>
-                      <td>{book.contributorName}</td>
-                      <td>{book.bookType}</td>
+                      <td>{book.author.authorName}</td>
+                      <td>{book.publisher.publisherName}</td>
+                      <td>{book.distributor.distributorName}</td>
+                      <td>{book.categories && book.categories.length > 0 ? book.categories.map(c => c.categoryName).join(', ') : ''}</td>
                     </tr>
                   ))
                 ) : (
-                  <tr><td colSpan="7" className="author__empty">Không có sách nào</td></tr>
+                  <tr><td colSpan="8" className="author__empty">Không có sách nào</td></tr>
                 )}
               </tbody>
             </table>
@@ -374,7 +383,7 @@ const AuthorList = () => {
               >
                 Trang trước
               </button>
-              {getPageNumbers(authorBooks.totalPages || 1).map((page, index) =>
+              {getPageNumbers(authorBooks.totalPages, true).map((page, index) =>
                 page === '...' ? (
                   <span key={`ellipsis-books-${index}`} className="author__pagination-ellipsis">
                     ...

@@ -79,17 +79,48 @@ export const deleteDistributor = createAsyncThunk(
   }
 );
 
+export const fetchDistributorBooks = createAsyncThunk(
+  'distributors/fetchDistributorBooks',
+  async ({ distributorId, index = 1, size = 5 }, { rejectWithValue, dispatch, getState }) => {
+    const state = getState().distributors;
+    const newRequestId = state.currentBooksRequestId + 1;
+    dispatch(setBooksRequestId(newRequestId));
+    try {
+      const response = await api.get(`/admin/books/distributor_books/${distributorId}`, {
+        params: { index, size },
+      });
+      return { data: response.data.result, requestId: newRequestId };
+    } catch (error) {
+      if (error.response?.status === 401) {
+        dispatch(logoutUser());
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        return rejectWithValue('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
+      }
+      return rejectWithValue(error.response?.data?.message || 'Lỗi khi lấy danh sách sách');
+    }
+  }
+);
+
 const distributorSlice = createSlice({
   name: 'distributors',
   initialState: {
     distributors: { content: [], totalPages: 0, totalElements: 0 },
+    distributorBooks: { content: [], totalPages: 0, totalElements: 0 },
     loading: false,
     error: null,
     currentDistributorsRequestId: 0,
+    currentBooksRequestId: 0,
   },
   reducers: {
     setDistributorsRequestId: (state, action) => {
       state.currentDistributorsRequestId = action.payload;
+    },
+    setBooksRequestId: (state, action) => {
+      state.currentBooksRequestId = action.payload;
+    },
+    resetDistributorBooks: (state) => {
+      state.distributorBooks = { content: [], totalPages: 0, totalElements: 0 };
     },
   },
   extraReducers: (builder) => {
@@ -156,9 +187,26 @@ const distributorSlice = createSlice({
       .addCase(deleteDistributor.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+      })
+      .addCase(fetchDistributorBooks.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchDistributorBooks.fulfilled, (state, action) => {
+        const { data, requestId } = action.payload;
+        if (requestId === state.currentBooksRequestId) {
+          state.loading = false;
+          state.distributorBooks = data;
+          state.error = null;
+        }
+      })
+      .addCase(fetchDistributorBooks.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+        state.distributorBooks = { content: [], totalPages: 0, totalElements: 0 };
       });
   },
 });
 
-export const { setDistributorsRequestId } = distributorSlice.actions;
+export const { setDistributorsRequestId, setBooksRequestId, resetDistributorBooks } = distributorSlice.actions;
 export default distributorSlice.reducer;

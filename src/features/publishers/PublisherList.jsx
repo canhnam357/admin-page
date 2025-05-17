@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
-import { fetchPublishers, createPublisher, updatePublisher } from './publisherSlice';
+import { fetchPublishers, createPublisher, updatePublisher, fetchPublisherBooks } from './publisherSlice';
 import './PublisherList.css';
 
 // Debounce utility function
@@ -15,12 +15,15 @@ const debounce = (func, delay) => {
 
 const PublisherList = () => {
   const dispatch = useDispatch();
-  const { publishers, loading, error } = useSelector((state) => state.publishers);
+  const { publishers, publisherBooks, loading, error } = useSelector((state) => state.publishers);
   const [currentPage, setCurrentPage] = useState(1);
   const [keyword, setKeyword] = useState('');
   const [createForm, setCreateForm] = useState({ publisherName: '', showModal: false });
   const [editPublisher, setEditPublisher] = useState(null);
-  const size = 10;
+  const [viewPublisherId, setViewPublisherId] = useState(null);
+  const [currentBookPage, setCurrentBookPage] = useState(1);
+  const size = 10; // Số lượng nhà xuất bản trên mỗi trang
+  const bookSize = 5; // Số lượng sách trên mỗi trang
 
   // Debounced search function
   const debouncedFetchPublishers = useMemo(
@@ -45,11 +48,23 @@ const PublisherList = () => {
   }, [dispatch, currentPage, keyword, size]);
 
   useEffect(() => {
+    if (viewPublisherId) {
+      dispatch(fetchPublisherBooks({ publisherId: viewPublisherId, index: currentBookPage, size: bookSize }));
+    }
+  }, [viewPublisherId, currentBookPage, dispatch, bookSize]);
+
+  useEffect(() => {
     if (error && error !== 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!') {
       toast.dismiss();
       toast.error(`Lỗi: ${error}`);
     }
   }, [error]);
+
+  useEffect(() => {
+    if (publisherBooks.totalPages > 0 && currentBookPage > publisherBooks.totalPages) {
+      setCurrentBookPage(publisherBooks.totalPages);
+    }
+  }, [publisherBooks.totalPages, currentBookPage]);
 
   const handleNextPage = () => {
     if (currentPage < publishers.totalPages) {
@@ -100,6 +115,11 @@ const PublisherList = () => {
     setEditPublisher({ ...publisher });
   };
 
+  const handleViewBooks = (publisherId) => {
+    setViewPublisherId(publisherId);
+    setCurrentBookPage(1);
+  };
+
   const handleSaveEdit = async () => {
     if (editPublisher && validatePublisherName(editPublisher.publisherName)) {
       try {
@@ -117,31 +137,47 @@ const PublisherList = () => {
     }
   };
 
-  const renderSkeleton = () => {
-    return Array.from({ length: size }).map((_, index) => (
-      <tr key={index} className="publisher__table-row--loading">
-        <td><div className="publisher__skeleton publisher__skeleton--text"></div></td>
-        <td><div className="publisher__skeleton publisher__skeleton--text"></div></td>
-        <td><div className="publisher__skeleton publisher__skeleton--text"></div></td>
+  const renderSkeleton = (isBooks = false) => {
+    const length = isBooks ? bookSize : size;
+    return Array.from({ length }).map((_, index) => (
+      <tr key={index} className={isBooks ? 'publisher__books-table-row--loading' : 'publisher__table-row--loading'}>
+        {isBooks ? (
+          <>
+            <td><div className="publisher__skeleton publisher__skeleton--image"></div></td>
+            <td><div className="publisher__skeleton publisher__skeleton--text"></div></td>
+            <td><div className="publisher__skeleton publisher__skeleton--text"></div></td>
+            <td><div className="publisher__skeleton publisher__skeleton--text"></div></td>
+            <td><div className="publisher__skeleton publisher__skeleton--text"></div></td>
+            <td><div className="publisher__skeleton publisher__skeleton--text"></div></td>
+            <td><div className="publisher__skeleton publisher__skeleton--text"></div></td>
+          </>
+        ) : (
+          <>
+            <td><div className="publisher__skeleton publisher__skeleton--text"></div></td>
+            <td><div className="publisher__skeleton publisher__skeleton--text"></div></td>
+            <td><div className="publisher__skeleton publisher__skeleton--text"></div></td>
+          </>
+        )}
       </tr>
     ));
   };
 
-  const getPageNumbers = () => {
+  const getPageNumbers = (totalPages, isBooks = false) => {
     const delta = 1;
     const range = [];
     const rangeWithDots = [];
-    const totalPages = publishers.totalPages || 1;
+    const current = isBooks ? currentBookPage : currentPage;
+    const pages = totalPages || 1;
 
-    const start = Math.max(2, currentPage - delta);
-    const end = Math.min(totalPages - 1, currentPage + delta);
+    const start = Math.max(2, current - delta);
+    const end = Math.min(pages - 1, current + delta);
 
     range.push(1);
     for (let i = start; i <= end; i++) {
       range.push(i);
     }
-    if (totalPages > 1) {
-      range.push(totalPages);
+    if (pages > 1) {
+      range.push(pages);
     }
 
     let prevPage = null;
@@ -183,7 +219,7 @@ const PublisherList = () => {
           </tr>
         </thead>
         <tbody>
-          {loading ? (
+          {loading && !viewPublisherId ? (
             renderSkeleton()
           ) : error ? (
             <tr><td colSpan="3" className="publisher__empty">Lỗi: {error}</td></tr>
@@ -194,6 +230,9 @@ const PublisherList = () => {
                 <td>{publisher.publisherName}</td>
                 <td>
                   <button className="publisher__action-button" onClick={() => handleEdit(publisher)}>Sửa</button>
+                  <button className="publisher__action-button publisher__action-button--view" onClick={() => handleViewBooks(publisher.publisherId)}>
+                    Xem sách
+                  </button>
                 </td>
               </tr>
             ))
@@ -210,7 +249,7 @@ const PublisherList = () => {
         >
           Trang trước
         </button>
-        {getPageNumbers().map((page, index) =>
+        {getPageNumbers(publishers.totalPages).map((page, index) =>
           page === '...' ? (
             <span key={`ellipsis-${index}`} className="publisher__pagination-ellipsis">
               ...
@@ -276,6 +315,95 @@ const PublisherList = () => {
               <button className="publisher__modal-button" onClick={handleSaveEdit}>Lưu</button>
               <button className="publisher__modal-button publisher__modal-button--cancel" onClick={() => setEditPublisher(null)}>
                 Hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {viewPublisherId && (
+        <div className="publisher__modal" onClick={() => { setViewPublisherId(null); setCurrentBookPage(1); }}>
+          <div className="publisher__modal-content publisher__books-modal" onClick={(e) => e.stopPropagation()}>
+            <span className="publisher__modal-close" onClick={() => { setViewPublisherId(null); setCurrentBookPage(1); }}>
+              ×
+            </span>
+            <h3 className="publisher__modal-title">
+              Danh sách sách của {publishers.content.find(p => p.publisherId === viewPublisherId)?.publisherName || 'Nhà xuất bản'}
+            </h3>
+            <table className="publisher__books-table">
+              <thead>
+                <tr>
+                  <th>Thumbnail</th>
+                  <th>Tên sách</th>
+                  <th>Giá</th>
+                  <th>Số trang</th>
+                  <th>Tác giả</th>
+                  <th>Nhà phát hành</th>
+                  <th>Loại sách</th>
+                  <th>Thể loại</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  renderSkeleton(true)
+                ) : publisherBooks.content && publisherBooks.content.length > 0 ? (
+                  publisherBooks.content.map((book) => (
+                    <tr key={book.bookId} className="publisher__table-row">
+                      <td>
+                        {book.urlThumbnail ? (
+                          <img
+                            src={book.urlThumbnail}
+                            alt={book.bookName}
+                            className="publisher__book-thumbnail"
+                            onError={(e) => { e.target.src = 'https://via.placeholder.com/50'; }}
+                          />
+                        ) : (
+                          'Không có ảnh'
+                        )}
+                      </td>
+                      <td>{book.bookName}</td>
+                      <td>{book.price.toLocaleString('vi-VN')} VNĐ</td>
+                      <td>{book.numberOfPage}</td>
+                      <td>{book.author.authorName}</td>
+                      <td>{book.distributor.distributorName}</td>
+                      <td>{book.bookType.bookTypeName}</td>
+                      <td>{book.categories && book.categories.length > 0 ? book.categories.map(c => c.categoryName).join(', ') : ''}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr><td colSpan="7" className="publisher__empty">Không có sách nào</td></tr>
+                )}
+              </tbody>
+            </table>
+            <div className="publisher__books-pagination">
+              <button
+                className="publisher__pagination-button"
+                onClick={() => setCurrentBookPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentBookPage === 1 || loading || publisherBooks.totalPages === 0}
+              >
+                Trang trước
+              </button>
+              {getPageNumbers(publisherBooks.totalPages, true).map((page, index) =>
+                page === '...' ? (
+                  <span key={`ellipsis-books-${index}`} className="publisher__pagination-ellipsis">
+                    ...
+                  </span>
+                ) : (
+                  <button
+                    key={page}
+                    className={`publisher__pagination-button ${currentBookPage === page ? 'publisher__pagination-button--active' : ''}`}
+                    onClick={() => setCurrentBookPage(page)}
+                    disabled={loading}
+                  >
+                    {page}
+                  </button>
+                )
+              )}
+              <button
+                className="publisher__pagination-button"
+                onClick={() => setCurrentBookPage(prev => Math.min(prev + 1, publisherBooks.totalPages || 1))}
+                disabled={currentBookPage === publisherBooks.totalPages || loading || publisherBooks.totalPages === 0}
+              >
+                Trang sau
               </button>
             </div>
           </div>

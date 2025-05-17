@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
-import { fetchDistributors, createDistributor, updateDistributor } from './distributorSlice';
+import { fetchDistributors, createDistributor, updateDistributor, fetchDistributorBooks } from './distributorSlice';
 import './DistributorList.css';
 
 // Debounce utility function
@@ -15,12 +15,15 @@ const debounce = (func, delay) => {
 
 const DistributorList = () => {
   const dispatch = useDispatch();
-  const { distributors, loading, error } = useSelector((state) => state.distributors);
+  const { distributors, distributorBooks, loading, error } = useSelector((state) => state.distributors);
   const [currentPage, setCurrentPage] = useState(1);
   const [keyword, setKeyword] = useState('');
   const [createForm, setCreateForm] = useState({ distributorName: '', showModal: false });
   const [editDistributor, setEditDistributor] = useState(null);
-  const size = 10;
+  const [viewDistributorId, setViewDistributorId] = useState(null);
+  const [currentBookPage, setCurrentBookPage] = useState(1);
+  const size = 10; // Số lượng nhà phát hành trên mỗi trang
+  const bookSize = 5; // Số lượng sách trên mỗi trang
 
   // Debounced search function
   const debouncedFetchDistributors = useMemo(
@@ -45,11 +48,23 @@ const DistributorList = () => {
   }, [dispatch, currentPage, keyword, size]);
 
   useEffect(() => {
+    if (viewDistributorId) {
+      dispatch(fetchDistributorBooks({ distributorId: viewDistributorId, index: currentBookPage, size: bookSize }));
+    }
+  }, [viewDistributorId, currentBookPage, dispatch, bookSize]);
+
+  useEffect(() => {
     if (error && error !== 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!') {
       toast.dismiss();
       toast.error(`Lỗi: ${error}`);
     }
   }, [error]);
+
+  useEffect(() => {
+    if (distributorBooks.totalPages > 0 && currentBookPage > distributorBooks.totalPages) {
+      setCurrentBookPage(distributorBooks.totalPages);
+    }
+  }, [distributorBooks.totalPages, currentBookPage]);
 
   const handleNextPage = () => {
     if (currentPage < distributors.totalPages) {
@@ -100,6 +115,11 @@ const DistributorList = () => {
     setEditDistributor({ ...distributor });
   };
 
+  const handleViewBooks = (distributorId) => {
+    setViewDistributorId(distributorId);
+    setCurrentBookPage(1);
+  };
+
   const handleSaveEdit = async () => {
     if (editDistributor && validateDistributorName(editDistributor.distributorName)) {
       try {
@@ -117,31 +137,47 @@ const DistributorList = () => {
     }
   };
 
-  const renderSkeleton = () => {
-    return Array.from({ length: size }).map((_, index) => (
-      <tr key={index} className="distributor__table-row--loading">
-        <td><div className="distributor__skeleton distributor__skeleton--text"></div></td>
-        <td><div className="distributor__skeleton distributor__skeleton--text"></div></td>
-        <td><div className="distributor__skeleton distributor__skeleton--text"></div></td>
+  const renderSkeleton = (isBooks = false) => {
+    const length = isBooks ? bookSize : size;
+    return Array.from({ length }).map((_, index) => (
+      <tr key={index} className={isBooks ? 'distributor__books-table-row--loading' : 'distributor__table-row--loading'}>
+        {isBooks ? (
+          <>
+            <td><div className="distributor__skeleton distributor__skeleton--image"></div></td>
+            <td><div className="distributor__skeleton distributor__skeleton--text"></div></td>
+            <td><div className="distributor__skeleton distributor__skeleton--text"></div></td>
+            <td><div className="distributor__skeleton distributor__skeleton--text"></div></td>
+            <td><div className="distributor__skeleton distributor__skeleton--text"></div></td>
+            <td><div className="distributor__skeleton distributor__skeleton--text"></div></td>
+            <td><div className="distributor__skeleton distributor__skeleton--text"></div></td>
+          </>
+        ) : (
+          <>
+            <td><div className="distributor__skeleton distributor__skeleton--text"></div></td>
+            <td><div className="distributor__skeleton distributor__skeleton--text"></div></td>
+            <td><div className="distributor__skeleton distributor__skeleton--text"></div></td>
+          </>
+        )}
       </tr>
     ));
   };
 
-  const getPageNumbers = () => {
+  const getPageNumbers = (totalPages, isBooks = false) => {
     const delta = 1;
     const range = [];
     const rangeWithDots = [];
-    const totalPages = distributors.totalPages || 1;
+    const current = isBooks ? currentBookPage : currentPage;
+    const pages = totalPages || 1;
 
-    const start = Math.max(2, currentPage - delta);
-    const end = Math.min(totalPages - 1, currentPage + delta);
+    const start = Math.max(2, current - delta);
+    const end = Math.min(pages - 1, current + delta);
 
     range.push(1);
     for (let i = start; i <= end; i++) {
       range.push(i);
     }
-    if (totalPages > 1) {
-      range.push(totalPages);
+    if (pages > 1) {
+      range.push(pages);
     }
 
     let prevPage = null;
@@ -183,7 +219,7 @@ const DistributorList = () => {
           </tr>
         </thead>
         <tbody>
-          {loading ? (
+          {loading && !viewDistributorId ? (
             renderSkeleton()
           ) : error ? (
             <tr><td colSpan="3" className="distributor__empty">Lỗi: {error}</td></tr>
@@ -194,6 +230,9 @@ const DistributorList = () => {
                 <td>{distributor.distributorName}</td>
                 <td>
                   <button className="distributor__action-button" onClick={() => handleEdit(distributor)}>Sửa</button>
+                  <button className="distributor__action-button distributor__action-button--view" onClick={() => handleViewBooks(distributor.distributorId)}>
+                    Xem sách
+                  </button>
                 </td>
               </tr>
             ))
@@ -210,7 +249,7 @@ const DistributorList = () => {
         >
           Trang trước
         </button>
-        {getPageNumbers().map((page, index) =>
+        {getPageNumbers(distributors.totalPages).map((page, index) =>
           page === '...' ? (
             <span key={`ellipsis-${index}`} className="distributor__pagination-ellipsis">
               ...
@@ -276,6 +315,95 @@ const DistributorList = () => {
               <button className="distributor__modal-button" onClick={handleSaveEdit}>Lưu</button>
               <button className="distributor__modal-button distributor__modal-button--cancel" onClick={() => setEditDistributor(null)}>
                 Hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {viewDistributorId && (
+        <div className="distributor__modal" onClick={() => { setViewDistributorId(null); setCurrentBookPage(1); }}>
+          <div className="distributor__modal-content distributor__books-modal" onClick={(e) => e.stopPropagation()}>
+            <span className="distributor__modal-close" onClick={() => { setViewDistributorId(null); setCurrentBookPage(1); }}>
+              ×
+            </span>
+            <h3 className="distributor__modal-title">
+              Danh sách sách của {distributors.content.find(d => d.distributorId === viewDistributorId)?.distributorName || 'Nhà phát hành'}
+            </h3>
+            <table className="distributor__books-table">
+              <thead>
+                <tr>
+                  <th>Thumbnail</th>
+                  <th>Tên sách</th>
+                  <th>Giá</th>
+                  <th>Số trang</th>
+                  <th>Tác giả</th>
+                  <th>Nhà xuất bản</th>
+                  <th>Loại sách</th>
+                  <th>Thể loại</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  renderSkeleton(true)
+                ) : distributorBooks.content && distributorBooks.content.length > 0 ? (
+                  distributorBooks.content.map((book) => (
+                    <tr key={book.bookId} className="distributor__table-row">
+                      <td>
+                        {book.urlThumbnail ? (
+                          <img
+                            src={book.urlThumbnail}
+                            alt={book.bookName}
+                            className="distributor__book-thumbnail"
+                            onError={(e) => { e.target.src = 'https://via.placeholder.com/50'; }}
+                          />
+                        ) : (
+                          'Không có ảnh'
+                        )}
+                      </td>
+                      <td>{book.bookName}</td>
+                      <td>{book.price.toLocaleString('vi-VN')} VNĐ</td>
+                      <td>{book.numberOfPage}</td>
+                      <td>{book.author.authorName}</td>
+                      <td>{book.publisher.publisherName}</td>
+                      <td>{book.bookType.bookTypeName}</td>
+                      <td>{book.categories && book.categories.length > 0 ? book.categories.map(c => c.categoryName).join(', ') : ''}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr><td colSpan="7" className="distributor__empty">Không có sách nào</td></tr>
+                )}
+              </tbody>
+            </table>
+            <div className="distributor__books-pagination">
+              <button
+                className="distributor__pagination-button"
+                onClick={() => setCurrentBookPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentBookPage === 1 || loading || distributorBooks.totalPages === 0}
+              >
+                Trang trước
+              </button>
+              {getPageNumbers(distributorBooks.totalPages, true).map((page, index) =>
+                page === '...' ? (
+                  <span key={`ellipsis-books-${index}`} className="distributor__pagination-ellipsis">
+                    ...
+                  </span>
+                ) : (
+                  <button
+                    key={page}
+                    className={`distributor__pagination-button ${currentBookPage === page ? 'distributor__pagination-button--active' : ''}`}
+                    onClick={() => setCurrentBookPage(page)}
+                    disabled={loading}
+                  >
+                    {page}
+                  </button>
+                )
+              )}
+              <button
+                className="distributor__pagination-button"
+                onClick={() => setCurrentBookPage(prev => Math.min(prev + 1, distributorBooks.totalPages || 1))}
+                disabled={currentBookPage === distributorBooks.totalPages || loading || distributorBooks.totalPages === 0}
+              >
+                Trang sau
               </button>
             </div>
           </div>
