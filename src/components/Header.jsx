@@ -29,7 +29,7 @@ const Header = () => {
   return (
     <header className="admin-header">
       <div className="admin-header__container">
-        <h1 className="admin-header__title">Quản lý Admin</h1>
+        <h1 className="admin-header__title">Trang Quản trị viên</h1>
         {isAuthenticated && (
           <nav className="admin-header__nav">
             <button className="admin-header__logout-button" onClick={handleLogout}>
