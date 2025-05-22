@@ -33,6 +33,12 @@ export const fetchNewUsersCount = createAsyncThunk(
         localStorage.removeItem('refreshToken');
         return rejectWithValue('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
       }
+      if (error.response?.status === 403) {
+        dispatch(logoutUser());
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        return rejectWithValue('Bạn không có quyền truy cập tài nguyên này!');
+      }
       return rejectWithValue(error.response?.data?.message || 'Lỗi khi lấy số lượng người dùng mới');
     }
   }
