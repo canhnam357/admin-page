@@ -61,10 +61,8 @@ const BookList = () => {
     () =>
       debounce((value) => {
         setKeyword(value);
-        setCurrentPage(1);
-        dispatch(fetchBooks({ index: 1, size, keyword: value }));
       }, 300),
-    [dispatch, size]
+    []
   );
 
   // Handle search input change
@@ -74,14 +72,16 @@ const BookList = () => {
     debouncedFetchBooks(value);
   };
 
+  // Fetch books and other data, reset page to 1 when keyword changes
   useEffect(() => {
-    dispatch(fetchBooks({ index: currentPage, size, keyword }));
+    dispatch(fetchBooks({ index: keyword ? 1 : currentPage, size, keyword }));
+    if (keyword) setCurrentPage(1); // Reset page only after dispatch
     dispatch(fetchAuthors({ index: 1, size: 100 }));
     dispatch(fetchPublishers({ index: 1, size: 100 }));
     dispatch(fetchDistributors({ index: 1, size: 100 }));
     dispatch(fetchBookTypes());
     dispatch(fetchCategories({ keyword: '' }));
-  }, [dispatch, currentPage, keyword]);
+  }, [dispatch, currentPage, keyword, size]);
 
   useEffect(() => {
     if (error && error !== 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!') {
@@ -708,7 +708,7 @@ const BookList = () => {
             <th>Giá</th>
             <th>Ngày tạo</th>
             <th>Ngày cập nhật</th>
-            <th>Đã xóa</th>
+            <th>Trạng thái</th>
             <th>Mới về</th>
             <th>Hành động</th>
           </tr>
@@ -739,11 +739,11 @@ const BookList = () => {
                       <span>{updatedAt.date}</span>
                     </div>
                   </td>
-                  <td className={book.isDeleted ? 'book-list__status--deleted-yes' : 'book-list__status--deleted-no'}>
-                    {book.isDeleted ? 'YES' : 'NO'}
+                  <td className={book.isDeleted ? 'book-list__status--stopped' : 'book-list__status--selling'}>
+                    {book.isDeleted ? 'Ngừng bán' : 'Đang bán'}
                   </td>
-                  <td className={book.newArrival ? 'book-list__status--new-yes' : 'book-list__status--new-no'}>
-                    {book.newArrival ? 'YES' : 'NO'}
+                  <td>
+                    {book.newArrival ? 'Hàng mới' : '—'}
                   </td>
                   <td>
                     <button className="book-list__action-button book-list__action-button--edit" onClick={() => handleEdit(book)}>Sửa</button>
@@ -841,8 +841,8 @@ const BookList = () => {
                   : 'Không có thể loại'}
               </div>
               <div className="book-list__detail-item"><strong>Loại sách:</strong> {viewBook.bookType.bookTypeName}</div>
-              <div className="book-list__detail-item"><strong>Mới về:</strong> {viewBook.newArrival ? 'Có' : 'Không'}</div>
-              <div className="book-list__detail-item"><strong>Đã xóa:</strong> {viewBook.isDeleted ? 'Có' : 'Không'}</div>
+              <div className="book-list__detail-item"><strong>Mới về:</strong> {viewBook.newArrival ? 'Hàng mới' : '—'}</div>
+              <div className="book-list__detail-item"><strong>Trạng thái:</strong> {viewBook.isDeleted ? 'Ngừng bán' : 'Đang bán'}</div>
             </div>
           </div>
         </div>
@@ -1267,7 +1267,7 @@ const BookList = () => {
             </div>
             <div className="book-list__form-group">
               <div className="book-list__checkbox-group">
-                <label className="book-list__label">Đã xóa</label>
+                <label className="book-list__label">Ngừng bán </label>
                 <input
                   type="checkbox"
                   checked={editForm.isDeleted}
