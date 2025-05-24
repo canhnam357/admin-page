@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import { Provider } from 'react-redux';
+import { Provider, useDispatch, useSelector } from 'react-redux';
 import { store } from './store';
 import 'react-toastify/dist/ReactToastify.css';
 import Header from './components/Header';
@@ -17,8 +17,16 @@ import BookTypeList from './features/book-types/BookTypeList';
 import OrderStatus from './features/order-status/OrderStatus';
 import RefundStatus from './features/refundStatus/RefundStatus'
 import './App.css';
+import { ToastContainer } from 'react-toastify';
 
 const App = () => {
+
+  const dispatch = useDispatch();
+  const { isAuthenticated } = useSelector((state) => state.auth);
+
+  useEffect(() => {
+  }, [dispatch, isAuthenticated]);
+
   return (
     <Provider store={store}>
       <Router>
@@ -37,9 +45,22 @@ const App = () => {
               <Route path="order-status" element={<OrderStatus />} />
               <Route path="refund-status" element={<RefundStatus />} />
             </Route>
-            <Route path="/" element={<Login />} />
+            <Route path="/login" element={<Login />} />
           </Routes>
         </div>
+        <ToastContainer
+          position="top-right"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          className="custom-toast-container"
+          style={{ zIndex: 99999 }} // Tăng z-index để đảm bảo không bị che
+        />
       </Router>
     </Provider>
   );

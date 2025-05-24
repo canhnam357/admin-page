@@ -1,7 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { toast } from 'react-toastify';
 import api from '../../api/api';
-import { logoutUser } from '../auth/authSlice';
 
 export const fetchRefundStatuses = createAsyncThunk(
   'refundStatuses/fetchRefundStatuses',
@@ -12,12 +11,6 @@ export const fetchRefundStatuses = createAsyncThunk(
       });
       return response.data.result;
     } catch (error) {
-      if (error.response?.status === 401) {
-        dispatch(logoutUser());
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        return rejectWithValue('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
-      }
       return rejectWithValue(error.response?.data?.message || 'Lỗi khi lấy danh sách trạng thái hoàn tiền');
     }
   }
@@ -30,12 +23,6 @@ export const fetchUserById = createAsyncThunk(
       const response = await api.get(`/admin/users/${userId}`);
       return response.data.result;
     } catch (error) {
-      if (error.response?.status === 401) {
-        dispatch(logoutUser());
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        return rejectWithValue('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
-      }
       return rejectWithValue(error.response?.data?.message || 'Lỗi khi lấy thông tin người dùng');
     }
   }

@@ -1,6 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../../api/api';
-import { logoutUser } from '../auth/authSlice';
 
 export const fetchCategories = createAsyncThunk(
   'categories/fetchCategories',
@@ -14,12 +13,6 @@ export const fetchCategories = createAsyncThunk(
       });
       return { data: response.data.result, requestId: newRequestId };
     } catch (error) {
-      if (error.response?.status === 401) {
-        dispatch(logoutUser());
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        return rejectWithValue('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
-      }
       return rejectWithValue(error.response?.data?.message || 'Lỗi khi lấy danh sách thể loại');
     }
   }
@@ -32,12 +25,6 @@ export const createCategory = createAsyncThunk(
       const response = await api.post('/admin/categories', { categoryName });
       return response.data.result;
     } catch (error) {
-      if (error.response?.status === 401) {
-        dispatch(logoutUser());
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        return rejectWithValue('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
-      }
       return rejectWithValue(error.response?.data?.message || 'Lỗi khi tạo thể loại');
     }
   }
@@ -50,12 +37,6 @@ export const updateCategory = createAsyncThunk(
       const response = await api.put(`/admin/categories/${categoryId}`, { categoryName });
       return response.data.result;
     } catch (error) {
-      if (error.response?.status === 401) {
-        dispatch(logoutUser());
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        return rejectWithValue('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
-      }
       return rejectWithValue(error.response?.data?.message || 'Lỗi khi sửa thể loại');
     }
   }
@@ -68,12 +49,6 @@ export const deleteCategory = createAsyncThunk(
       await api.delete(`/admin/categories/${categoryId}`);
       return categoryId;
     } catch (error) {
-      if (error.response?.status === 401) {
-        dispatch(logoutUser());
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        return rejectWithValue('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
-      }
       return rejectWithValue(error.response?.data?.message || 'Lỗi khi xóa thể loại');
     }
   }
@@ -91,12 +66,6 @@ export const fetchCategoryBooks = createAsyncThunk(
       });
       return { data: response.data.result, requestId: newRequestId };
     } catch (error) {
-      if (error.response?.status === 401) {
-        dispatch(logoutUser());
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        return rejectWithValue('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
-      }
       return rejectWithValue(error.response?.data?.message || 'Lỗi khi lấy danh sách sách');
     }
   }

@@ -1,6 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../../api/api';
-import { logoutUser } from '../auth/authSlice';
 
 export const fetchDistributors = createAsyncThunk(
   'distributors/fetchDistributors',
@@ -14,12 +13,6 @@ export const fetchDistributors = createAsyncThunk(
       });
       return { data: response.data.result, requestId: newRequestId };
     } catch (error) {
-      if (error.response?.status === 401) {
-        dispatch(logoutUser());
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        return rejectWithValue('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
-      }
       return rejectWithValue(error.response?.data?.message || 'Lỗi khi lấy danh sách nhà phát hành');
     }
   }
@@ -32,12 +25,6 @@ export const createDistributor = createAsyncThunk(
       const response = await api.post('/admin/distributors', { distributorName });
       return response.data.result;
     } catch (error) {
-      if (error.response?.status === 401) {
-        dispatch(logoutUser());
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        return rejectWithValue('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
-      }
       return rejectWithValue(error.response?.data?.message || 'Lỗi khi tạo nhà phát hành');
     }
   }
@@ -50,12 +37,6 @@ export const updateDistributor = createAsyncThunk(
       const response = await api.put(`/admin/distributors/${distributorId}`, { distributorName });
       return response.data.result;
     } catch (error) {
-      if (error.response?.status === 401) {
-        dispatch(logoutUser());
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        return rejectWithValue('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
-      }
       return rejectWithValue(error.response?.data?.message || 'Lỗi khi sửa nhà phát hành');
     }
   }
@@ -68,12 +49,6 @@ export const deleteDistributor = createAsyncThunk(
       await api.delete(`/admin/distributors/${distributorId}`);
       return distributorId;
     } catch (error) {
-      if (error.response?.status === 401) {
-        dispatch(logoutUser());
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        return rejectWithValue('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
-      }
       return rejectWithValue(error.response?.data?.message || 'Lỗi khi xóa nhà phát hành');
     }
   }
@@ -91,12 +66,6 @@ export const fetchDistributorBooks = createAsyncThunk(
       });
       return { data: response.data.result, requestId: newRequestId };
     } catch (error) {
-      if (error.response?.status === 401) {
-        dispatch(logoutUser());
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        return rejectWithValue('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
-      }
       return rejectWithValue(error.response?.data?.message || 'Lỗi khi lấy danh sách sách');
     }
   }

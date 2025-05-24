@@ -1,6 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../../api/api';
-import { logoutUser } from '../auth/authSlice';
 
 export const fetchUsers = createAsyncThunk(
   'users/fetchUsers',
@@ -14,12 +13,6 @@ export const fetchUsers = createAsyncThunk(
       });
       return { data: response.data.result, requestId: newRequestId };
     } catch (error) {
-      if (error.response?.status === 401) {
-        dispatch(logoutUser());
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        return rejectWithValue('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
-      }
       return rejectWithValue(error.response?.data?.message || 'Lỗi khi lấy danh sách người dùng');
     }
   }
@@ -32,12 +25,6 @@ export const updateUserStatus = createAsyncThunk(
       const response = await api.put(`/admin/users/${userId}`, { active, verified, role });
       return response.data;
     } catch (error) {
-      if (error.response?.status === 401) {
-        dispatch(logoutUser());
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        return rejectWithValue('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
-      }
       return rejectWithValue(error.response?.data?.message || 'Lỗi khi cập nhật trạng thái');
     }
   }

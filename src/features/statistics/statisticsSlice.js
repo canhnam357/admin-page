@@ -1,6 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../../api/api';
-import { logoutUser } from '../auth/authSlice'; // Import logoutUser
 
 export const fetchMonthlyRevenue = createAsyncThunk(
   'statistics/fetchMonthlyRevenue',
@@ -9,12 +8,6 @@ export const fetchMonthlyRevenue = createAsyncThunk(
       const response = await api.get(`/admin/statistics/monthly-revenue?year=${year}`);
       return response.data.result;
     } catch (error) {
-      if (error.response?.status === 401) {
-        dispatch(logoutUser());
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        return rejectWithValue('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
-      }
       return rejectWithValue(error.response?.data?.message || 'Lỗi khi lấy doanh thu theo tháng');
     }
   }
@@ -27,18 +20,6 @@ export const fetchNewUsersCount = createAsyncThunk(
       const response = await api.get(`/admin/statistics/count-verified-user?year=${year}`);
       return response.data.result;
     } catch (error) {
-      if (error.response?.status === 401) {
-        dispatch(logoutUser());
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        return rejectWithValue('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
-      }
-      if (error.response?.status === 403) {
-        dispatch(logoutUser());
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        return rejectWithValue('Bạn không có quyền truy cập tài nguyên này!');
-      }
       return rejectWithValue(error.response?.data?.message || 'Lỗi khi lấy số lượng người dùng mới');
     }
   }
@@ -51,12 +32,6 @@ export const fetchOrdersByStatus = createAsyncThunk(
       const response = await api.get('/admin/statistics/order-by-status');
       return response.data.result;
     } catch (error) {
-      if (error.response?.status === 401) {
-        dispatch(logoutUser());
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        return rejectWithValue('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
-      }
       return rejectWithValue(error.response?.data?.message || 'Lỗi khi lấy số lượng đơn hàng theo trạng thái');
     }
   }

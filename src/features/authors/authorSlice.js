@@ -1,6 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../../api/api';
-import { logoutUser } from '../auth/authSlice';
 
 export const fetchAuthors = createAsyncThunk(
   'authors/fetchAuthors',
@@ -14,12 +13,6 @@ export const fetchAuthors = createAsyncThunk(
       });
       return { data: response.data.result, requestId: newRequestId };
     } catch (error) {
-      if (error.response?.status === 401) {
-        dispatch(logoutUser());
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        return rejectWithValue('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
-      }
       return rejectWithValue(error.response?.data?.message || 'Lỗi khi lấy danh sách tác giả');
     }
   }
@@ -32,12 +25,6 @@ export const createAuthor = createAsyncThunk(
       const response = await api.post('/admin/authors', { authorName });
       return response.data.result;
     } catch (error) {
-      if (error.response?.status === 401) {
-        dispatch(logoutUser());
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        return rejectWithValue('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
-      }
       return rejectWithValue(error.response?.data?.message || 'Lỗi khi tạo tác giả');
     }
   }
@@ -50,12 +37,6 @@ export const updateAuthor = createAsyncThunk(
       const response = await api.put(`/admin/authors/${authorId}`, { authorName });
       return response.data.result;
     } catch (error) {
-      if (error.response?.status === 401) {
-        dispatch(logoutUser());
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        return rejectWithValue('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
-      }
       return rejectWithValue(error.response?.data?.message || 'Lỗi khi sửa tác giả');
     }
   }
@@ -68,12 +49,6 @@ export const deleteAuthor = createAsyncThunk(
       await api.delete(`/admin/authors/${authorId}`);
       return authorId;
     } catch (error) {
-      if (error.response?.status === 401) {
-        dispatch(logoutUser());
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        return rejectWithValue('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
-      }
       return rejectWithValue(error.response?.data?.message || 'Lỗi khi xóa tác giả');
     }
   }
@@ -91,12 +66,6 @@ export const fetchAuthorBooks = createAsyncThunk(
       });
       return { data: response.data.result, requestId: newRequestId };
     } catch (error) {
-      if (error.response?.status === 401) {
-        dispatch(logoutUser());
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        return rejectWithValue('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
-      }
       return rejectWithValue(error.response?.data?.message || 'Lỗi khi lấy danh sách sách');
     }
   }

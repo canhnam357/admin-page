@@ -1,6 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../../api/api';
-import { logoutUser } from '../auth/authSlice';
 
 export const fetchBookTypes = createAsyncThunk(
   'bookTypes/fetchBookTypes',
@@ -9,12 +8,6 @@ export const fetchBookTypes = createAsyncThunk(
       const response = await api.get('/admin/book-types');
       return response.data.result;
     } catch (error) {
-      if (error.response?.status === 401) {
-        dispatch(logoutUser());
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        return rejectWithValue('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
-      }
       return rejectWithValue(error.response?.data?.message || 'Lỗi khi lấy danh sách loại sách');
     }
   }
@@ -27,12 +20,6 @@ export const createBookType = createAsyncThunk(
       const response = await api.post('/admin/book-types', { bookTypeName });
       return response.data.result;
     } catch (error) {
-      if (error.response?.status === 401) {
-        dispatch(logoutUser());
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        return rejectWithValue('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
-      }
       return rejectWithValue(error.response?.data?.message || 'Lỗi khi tạo loại sách');
     }
   }
@@ -45,12 +32,6 @@ export const updateBookType = createAsyncThunk(
       const response = await api.put(`/admin/book-types/${bookTypeId}`, { bookTypeName });
       return response.data.result;
     } catch (error) {
-      if (error.response?.status === 401) {
-        dispatch(logoutUser());
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        return rejectWithValue('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
-      }
       return rejectWithValue(error.response?.data?.message || 'Lỗi khi sửa loại sách');
     }
   }
@@ -63,12 +44,6 @@ export const deleteBookType = createAsyncThunk(
       await api.delete(`/admin/book-types/${bookTypeId}`);
       return bookTypeId;
     } catch (error) {
-      if (error.response?.status === 401) {
-        dispatch(logoutUser());
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        return rejectWithValue('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
-      }
       return rejectWithValue(error.response?.data?.message || 'Lỗi khi xóa loại sách');
     }
   }

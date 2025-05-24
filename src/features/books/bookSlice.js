@@ -1,6 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../../api/api';
-import { logoutUser } from '../auth/authSlice';
 
 export const fetchBooks = createAsyncThunk(
   'books/fetchBooks',
@@ -14,12 +13,6 @@ export const fetchBooks = createAsyncThunk(
       });
       return { data: response.data.result, requestId: newRequestId };
     } catch (error) {
-      if (error.response?.status === 401) {
-        dispatch(logoutUser());
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        return rejectWithValue('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
-      }
       return rejectWithValue(error.response?.data?.message || 'Lỗi khi lấy danh sách sách');
     }
   }
@@ -32,33 +25,6 @@ export const createBook = createAsyncThunk(
       const response = await api.post('/admin/books', bookData);
       return response.data.result;
     } catch (error) {
-      if (error.response?.status === 401) {
-        dispatch(logoutUser());
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        return rejectWithValue('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
-      }
-      if (error.response?.status === 422) {
-        if (error.response.data.message.includes('bookName')) {
-          return rejectWithValue('Tên sách không được rỗng hoặc đã tồn tại!');
-        } else if (error.response.data.message.includes('inStock')) {
-          return rejectWithValue('Số lượng phải lớn hơn hoặc bằng 0!');
-        } else if (error.response.data.message.includes('price')) {
-          return rejectWithValue('Giá phải lớn hơn 0!');
-        } else if (error.response.data.message.includes('numberOfPage')) {
-          return rejectWithValue('Số trang phải lớn hơn 0!');
-        } else if (error.response.data.message.includes('weight')) {
-          return rejectWithValue('Cân nặng phải lớn hơn 0!');
-        } else if (error.response.data.message.includes('authorId')) {
-          return rejectWithValue('Vui lòng chọn tác giả hợp lệ!');
-        } else if (error.response.data.message.includes('publisherId')) {
-          return rejectWithValue('Vui lòng chọn nhà xuất bản hợp lệ!');
-        } else if (error.response.data.message.includes('distributorId')) {
-          return rejectWithValue('Vui lòng chọn nhà phát hành hợp lệ!');
-        } else if (error.response.data.message.includes('bookTypeId')) {
-          return rejectWithValue('Vui lòng chọn loại sách hợp lệ!');
-        }
-      }
       return rejectWithValue(error.response?.data?.message || 'Lỗi khi tạo sách');
     }
   }
@@ -71,36 +37,6 @@ export const updateBook = createAsyncThunk(
       const response = await api.put(`/admin/books/${bookId}`, formData);
       return response.data.result;
     } catch (error) {
-      if (error.response?.status === 401) {
-        dispatch(logoutUser());
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        return rejectWithValue('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
-      }
-      if (error.response?.status === 404) {
-        return rejectWithValue('Sách không tồn tại!');
-      }
-      if (error.response?.status === 422) {
-        if (error.response.data.message.includes('bookName')) {
-          return rejectWithValue('Tên sách không được rỗng hoặc đã tồn tại!');
-        } else if (error.response.data.message.includes('inStock')) {
-          return rejectWithValue('Số lượng phải lớn hơn hoặc bằng 0!');
-        } else if (error.response.data.message.includes('price')) {
-          return rejectWithValue('Giá phải lớn hơn 0!');
-        } else if (error.response.data.message.includes('numberOfPage')) {
-          return rejectWithValue('Số trang phải lớn hơn 0!');
-        } else if (error.response.data.message.includes('weight')) {
-          return rejectWithValue('Cân nặng phải lớn hơn 0!');
-        } else if (error.response.data.message.includes('authorId')) {
-          return rejectWithValue('Vui lòng chọn tác giả hợp lệ!');
-        } else if (error.response.data.message.includes('publisherId')) {
-          return rejectWithValue('Vui lòng chọn nhà xuất bản hợp lệ!');
-        } else if (error.response.data.message.includes('distributorId')) {
-          return rejectWithValue('Vui lòng chọn nhà phát hành hợp lệ!');
-        } else if (error.response.data.message.includes('bookTypeId')) {
-          return rejectWithValue('Vui lòng chọn loại sách hợp lệ!');
-        }
-      }
       return rejectWithValue(error.response?.data?.message || 'Lỗi khi cập nhật sách');
     }
   }

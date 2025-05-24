@@ -26,7 +26,7 @@ const Login = () => {
       // Xử lý lỗi 401 hoặc refresh token thất bại từ api.js
       if (error.message === 'Không tìm thấy refresh token' || error.response?.status === 401) {
         dispatch(logoutUser());
-        navigate('/');
+        navigate('/login');
       }
       console.error('Lỗi đăng nhập:', error);
       // Thông báo lỗi đã được xử lý trong authSlice, không cần hiển thị thêm toast ở đây

@@ -2,31 +2,13 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
-import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { store } from './store';
-import { configureApiInterceptors } from './api/api';
-
-configureApiInterceptors(store);
+import { Provider } from 'react-redux';
+import store from './store';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
-  <>
-    <React.StrictMode>
-      <App />
-    </React.StrictMode>
-    <ToastContainer
-      position="top-right"
-      autoClose={3000}
-      hideProgressBar={false}
-      newestOnTop={false}
-      closeOnClick
-      rtl={false}
-      pauseOnFocusLoss
-      draggable
-      pauseOnHover
-      className="custom-toast-container"
-      style={{ zIndex: 99999 }} // Tăng z-index để đảm bảo không bị che
-    />
-  </>
+  <Provider store={store}>
+    <App />
+  </Provider>
 );
