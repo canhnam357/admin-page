@@ -26,14 +26,14 @@ export const loginUser = createAsyncThunk(
       const response = await api.post('/auth/login', { email, password });
       if (response.data.success) {
         const { accessToken, refreshToken, username } = response.data.result;
-        localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('refreshToken', refreshToken);
         const decode = decodeJWT(accessToken);
         if (decode.user_role !== "ADMIN") {
           const message = 'Bạn không có quyền truy cập';
           const statusCode = response?.data?.statusCode;
           return rejectWithValue({message, statusCode});
         }
+        localStorage.setItem('accessToken', accessToken);
+        localStorage.setItem('refreshToken', refreshToken);
         return { username };
       }
       throw new Error(response.data.message || 'Đăng nhập thất bại!');
