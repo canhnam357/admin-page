@@ -23,9 +23,9 @@ export const loginUser = createAsyncThunk(
   'auth/loginUser',
   async ({ email, password }, { rejectWithValue }) => {
     try {
-      const response = await api.post('/auth/login', { email, password });
+      const response = await api.post('/auth/login', { email, password }, {withCredentials: true});
       if (response.data.success) {
-        const { accessToken, refreshToken, username } = response.data.result;
+        const { accessToken, username } = response.data.result;
         const decode = decodeJWT(accessToken);
         if (decode.user_role !== "ADMIN") {
           const message = 'Bạn không có quyền truy cập';
@@ -33,14 +33,12 @@ export const loginUser = createAsyncThunk(
           return rejectWithValue({message, statusCode});
         }
         localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('refreshToken', refreshToken);
         return { username };
       }
       throw new Error(response.data.message || 'Đăng nhập thất bại!');
     } catch (error) {
       const message = error.response?.data?.message || 'Đăng nhập thất bại!';
       localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
       const statusCode = error.response?.data?.statusCode;
       return rejectWithValue({ message, statusCode });
     }
@@ -51,11 +49,9 @@ export const logoutUser = createAsyncThunk(
   'auth/logoutUser',
   async (_, { rejectWithValue }) => {
     try {
-      const refreshToken = localStorage.getItem('refreshToken');
-      const response = await api.post('/auth/logout', null, { params: { refreshToken } });
+      const response = await api.post('/auth/logout', null, {withCredentials: true});
       if (response.status === 200) {
         localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
         toast.dismiss();
         toast.success("Đăng xuất thành công!");
         return true;
@@ -64,7 +60,6 @@ export const logoutUser = createAsyncThunk(
     } catch (error) {
       const message = error.response?.data?.message || 'Đăng xuất thất bại!';
       localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
       return rejectWithValue(message);
     }
   }
