@@ -104,6 +104,14 @@
   background-color: #16a34a;
 }
 
+.order-status__action-button--cause {
+  background-color: #6b7280;
+}
+
+.order-status__action-button--cause:hover {
+  background-color: #4b5563;
+}
+
 .order-status__status {
   padding: 4px 8px;
   border-radius: 4px;
@@ -253,6 +261,12 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.order-status__cause-details {
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+  color: #2d3748;
 }
 
 .order-status__detail-item {

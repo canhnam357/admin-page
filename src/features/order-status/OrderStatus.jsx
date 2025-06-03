@@ -37,6 +37,7 @@ const OrderStatus = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [orderId, setOrderId] = useState('');
   const [size] = useState(10);
+  const [selectedCause, setSelectedCause] = useState(null);
 
   useEffect(() => {
     dispatch(fetchOrderStatuses({ index: currentPage, size, orderId }));
@@ -70,6 +71,14 @@ const OrderStatus = () => {
 
   const handleCloseUserModal = () => {
     dispatch(clearSelectedUser());
+  };
+
+  const handleViewCause = (cause) => {
+    setSelectedCause(cause);
+  };
+
+  const handleCloseCauseModal = () => {
+    setSelectedCause(null);
   };
 
   // Hàm định dạng changeAt thành hh:mm:ss dd-MM-yyyy
@@ -116,6 +125,7 @@ const OrderStatus = () => {
   const renderSkeleton = () => {
     return Array.from({ length: size }).map((_, index) => (
       <tr key={index} className="order-status__table-row--loading">
+        <td><div className="order-status__skeleton order-status__skeleton--text"></div></td>
         <td><div className="order-status__skeleton order-status__skeleton--text"></div></td>
         <td><div className="order-status__skeleton order-status__skeleton--text"></div></td>
         <td><div className="order-status__skeleton order-status__skeleton--text"></div></td>
@@ -183,6 +193,7 @@ const OrderStatus = () => {
             <th>Trạng thái trước</th>
             <th>Trạng thái hiện tại</th>
             <th>Người thay đổi</th>
+            <th>Lý do</th>
             <th>Thời gian thay đổi</th>
           </tr>
         </thead>
@@ -211,11 +222,21 @@ const OrderStatus = () => {
                     Xem chi tiết
                   </button>
                 </td>
+                <td>
+                  {['REJECTED', 'CANCELLED', 'FAILED_DELIVERY'].includes(status.toStatus) && (
+                    <button
+                      className="order-status__action-button order-status__action-button--cause"
+                      onClick={() => handleViewCause(status.cause)}
+                    >
+                      Xem
+                    </button>
+                  )}
+                </td>
                 <td>{formatChangeAt(status.changeAt)}</td>
               </tr>
             ))
           ) : (
-            <tr><td colSpan="5" className="order-status__empty">Không có dữ liệu</td></tr>
+            <tr><td colSpan="6" className="order-status__empty">Không có dữ liệu</td></tr>
           )}
         </tbody>
       </table>
@@ -296,6 +317,17 @@ const OrderStatus = () => {
                   {selectedUser.verified ? 'YES' : 'NO'}
                 </span>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {selectedCause && (
+        <div className="order-status__modal" onClick={handleCloseCauseModal}>
+          <div className="order-status__modal-content" onClick={(e) => e.stopPropagation()}>
+            <span className="order-status__modal-close" onClick={handleCloseCauseModal}>×</span>
+            <h3 className="order-status__modal-title">Lý do</h3>
+            <div className="order-status__cause-details">
+              <p>{selectedCause || 'Không có lý do'}</p>
             </div>
           </div>
         </div>
