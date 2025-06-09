@@ -403,22 +403,23 @@ const BookList = () => {
       formData.append('newArrival', editForm.newArrival);
       formData.append('isDeleted', editForm.isDeleted);
 
-      const oldImagesCount = oldImages.length - removedOldImageIds.length;
-      let adjustedThumbnailIdx;
-      if (editForm.thumbnailIdx < oldImagesCount) {
-        adjustedThumbnailIdx = editForm.thumbnailIdx;
-      } else {
-        const newImageIndex = editForm.thumbnailIdx - oldImagesCount;
-        adjustedThumbnailIdx = oldImagesCount + newImageIndex;
+      // Điều chỉnh thumbnailIdx dựa trên danh sách ảnh còn lại
+      const remainingOldImagesCount = oldImages.length - removedOldImageIds.length;
+      let adjustedThumbnailIdx = editForm.thumbnailIdx;
+      if (editForm.thumbnailIdx >= remainingOldImagesCount) {
+        const newImageIndex = editForm.thumbnailIdx - remainingOldImagesCount;
+        adjustedThumbnailIdx = remainingOldImagesCount + newImageIndex;
       }
       formData.append('thumbnailIdx', adjustedThumbnailIdx);
 
       editForm.categoriesId.forEach((id) => formData.append('categoriesId', id));
       editForm.images.forEach((file) => formData.append('images', file));
-      const remainingImages = oldImages
+
+      // Chỉ gửi các imageId còn lại, loại bỏ hoàn toàn các ID đã xóa
+      const remainingImageIds = oldImages
         .filter((img) => !removedOldImageIds.includes(img.imageId))
         .map((img) => img.imageId);
-      remainingImages.forEach((id) => formData.append('remainImages', id));
+      remainingImageIds.forEach((id) => formData.append('remainImages', id));
 
       await dispatch(updateBook({ bookId: editForm.bookId, formData })).unwrap();
       toast.dismiss();
@@ -504,6 +505,8 @@ const BookList = () => {
   const handleRemoveOldImage = (index, imageId) => {
     setImagePreviews((prev) => prev.filter((_, i) => i !== index));
     setRemovedOldImageIds((prev) => [...prev, imageId]);
+    // Cập nhật oldImages để loại bỏ ảnh đã xóa
+    setOldImages((prev) => prev.filter((_, i) => i !== index));
     setEditForm((prev) => ({
       ...prev,
       thumbnailIdx: prev.thumbnailIdx === index ? 0 : prev.thumbnailIdx > index ? prev.thumbnailIdx - 1 : prev.thumbnailIdx,
