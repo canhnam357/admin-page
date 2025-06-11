@@ -7,7 +7,7 @@ const Sidebar = () => {
     <nav className="admin-sidebar">
       <ul className="admin-sidebar__list">
         <li className="admin-sidebar__item">
-          <NavLink to="/statistics" className={({ isActive }) => (isActive ? 'admin-sidebar__link admin-sidebar__link--active' : 'admin-sidebar__link')} end>
+          <NavLink to="/" className={({ isActive }) => (isActive ? 'admin-sidebar__link admin-sidebar__link--active' : 'admin-sidebar__link')} end>
             Thống kê
           </NavLink>
         </li>

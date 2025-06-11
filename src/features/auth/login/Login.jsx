@@ -20,7 +20,7 @@ const Login = () => {
     try {
       const resultAction = await dispatch(loginUser(data)).unwrap();
       if (resultAction && localStorage.getItem('accessToken')) {
-        navigate('/statistics');
+        navigate('/');
       }
     } catch (error) {
       // Xử lý lỗi 401 hoặc refresh token thất bại từ api.js

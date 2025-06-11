@@ -15,7 +15,7 @@ const Admin = () => {
     if (!isAuthenticated && location.pathname !== '/login') {
       navigate('/login');
     } else if (isAuthenticated && location.pathname === '/login') {
-      navigate('/statistics');
+      navigate('/');
     }
   }, [isAuthenticated, navigate, location]);
 
