@@ -3,13 +3,13 @@ import api from '../../api/api';
 
 export const fetchUsers = createAsyncThunk(
   'users/fetchUsers',
-  async ({ index = 1, size = 10, email = '', isActive = 2, isVerified = 2 }, { rejectWithValue, dispatch, getState }) => {
+  async ({ index = 1, size = 10, email = '', isActive = 2, isVerified = 2, role = '' }, { rejectWithValue, dispatch, getState }) => {
     const state = getState().users;
     const newRequestId = state.currentUsersRequestId + 1;
     dispatch(setUsersRequestId(newRequestId));
     try {
       const response = await api.get('/admin/users', {
-        params: { index, size, email, isActive, isVerified },
+        params: { index, size, email, isActive, isVerified, role },
       });
       return { data: response.data.result, requestId: newRequestId };
     } catch (error) {

@@ -50,7 +50,7 @@ const UserList = () => {
   const dispatch = useDispatch();
   const { users, loading, error } = useSelector((state) => state.users);
   const [currentPage, setCurrentPage] = useState(1);
-  const [filters, setFilters] = useState({ email: '', isActive: 2, isVerified: 2 });
+  const [filters, setFilters] = useState({ email: '', isActive: 2, isVerified: 2, role: 'ALL' });
   const [editUser, setEditUser] = useState(null);
   const [viewUser, setViewUser] = useState(null);
   const size = 10;
@@ -58,8 +58,8 @@ const UserList = () => {
   // Debounced search function
   const debouncedFetchUsers = useMemo(
     () =>
-      debounce((email, isActive, isVerified) => {
-        dispatch(fetchUsers({ index: 1, size, email, isActive, isVerified }));
+      debounce((email, isActive, isVerified, role) => {
+        dispatch(fetchUsers({ index: 1, size, email, isActive, isVerified, role: role === 'ALL' ? '' : role }));
       }, 300),
     [dispatch, size]
   );
@@ -68,21 +68,21 @@ const UserList = () => {
   const handleSearch = (e) => {
     const value = e.target.value;
     setFilters((prev) => ({ ...prev, email: value }));
-    debouncedFetchUsers(value, filters.isActive, filters.isVerified);
+    debouncedFetchUsers(value, filters.isActive, filters.isVerified, filters.role);
   };
 
   // Handle filter change for dropdowns
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
-    setFilters((prev) => ({ ...prev, [name]: parseInt(value) }));
+    setFilters((prev) => ({ ...prev, [name]: value }));
     setCurrentPage(1);
   };
 
   // Fetch users when page or filters change
   useEffect(() => {
-    dispatch(fetchUsers({ index: currentPage, size, ...filters }));
+    dispatch(fetchUsers({ index: currentPage, size, ...filters, role: filters.role === 'ALL' ? '' : filters.role }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dispatch, currentPage, filters.isActive, filters.isVerified]);
+  }, [dispatch, currentPage, filters.isActive, filters.isVerified, filters.role]);
 
   // Handle error toast
   useEffect(() => {
@@ -118,7 +118,7 @@ const UserList = () => {
           role: editUser.role
         })).unwrap();
         setEditUser(null);
-        dispatch(fetchUsers({ index: currentPage, size, ...filters }));
+        dispatch(fetchUsers({ index: currentPage, size, ...filters, role: filters.role === 'ALL' ? '' : filters.role }));
         toast.dismiss();
         toast.success("Cập nhật trạng thái thành công!");
       } catch (err) {
@@ -203,6 +203,18 @@ const UserList = () => {
             <option value={2}>Tất cả (Xác thực)</option>
             <option value={1}>Verified</option>
             <option value={0}>Unverified</option>
+          </select>
+          <select
+            name="role"
+            value={filters.role}
+            onChange={handleFilterChange}
+            className="user-list__select"
+          >
+            <option value="ALL">Tất cả (Vai trò)</option>
+            <option value="ADMIN">Quản trị viên</option>
+            <option value="EMPLOYEE">Nhân viên</option>
+            <option value="SHIPPER">Nhân viên giao hàng</option>
+            <option value="USER">Người dùng</option>
           </select>
         </div>
       </div>

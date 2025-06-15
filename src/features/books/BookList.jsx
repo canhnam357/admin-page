@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
 import { fetchBooks, createBook, updateBook } from './bookSlice';
@@ -17,6 +17,20 @@ const debounce = (func, delay) => {
     clearTimeout(timeoutId);
     timeoutId = setTimeout(() => func(...args), delay);
   };
+};
+
+// Hàm format số thành định dạng tiền tệ (1.000.000)
+const formatCurrency = (value) => {
+  if (!value) return '';
+  const num = parseFloat(value.toString().replace(/[^0-9]/g, ''));
+  if (isNaN(num)) return '';
+  return num.toLocaleString('vi-VN');
+};
+
+// Hàm parse giá trị đã format về số
+const parseCurrency = (value) => {
+  if (!value) return '';
+  return value.replace(/[^0-9]/g, '');
 };
 
 const BookList = () => {
@@ -55,6 +69,8 @@ const BookList = () => {
   const [removedOldImageIds, setRemovedOldImageIds] = useState([]);
   const [discountForm, setDiscountForm] = useState(null);
   const size = 10;
+  const startDateInputRef = useRef(null);
+  const endDateInputRef = useRef(null);
 
   // Debounced search function
   const debouncedFetchBooks = useMemo(
@@ -68,14 +84,14 @@ const BookList = () => {
   // Handle search input change
   const handleSearch = (e) => {
     const value = e.target.value;
-    setKeyword(value); // Update input value immediately for smooth typing
+    setKeyword(value);
     debouncedFetchBooks(value);
   };
 
   // Fetch books and other data, reset page to 1 when keyword changes
   useEffect(() => {
     dispatch(fetchBooks({ index: keyword ? 1 : currentPage, size, keyword }));
-    if (keyword) setCurrentPage(1); // Reset page only after dispatch
+    if (keyword) setCurrentPage(1);
     dispatch(fetchAuthors({ index: 1, size: 100 }));
     dispatch(fetchPublishers({ index: 1, size: 100 }));
     dispatch(fetchDistributors({ index: 1, size: 100 }));
@@ -233,7 +249,7 @@ const BookList = () => {
       toast.error('Giá không được rỗng');
       return false;
     }
-    if (parseFloat(price) <= 0) {
+    if (parseFloat(parseCurrency(price)) <= 0) {
       toast.dismiss();
       toast.error('Giá phải lớn hơn 0');
       return false;
@@ -287,13 +303,17 @@ const BookList = () => {
   };
 
   const handleCreate = async () => {
-    if (!validateBookForm(createForm)) return;
+    const formattedForm = {
+      ...createForm,
+      price: parseCurrency(createForm.price),
+    };
+    if (!validateBookForm(formattedForm)) return;
 
     try {
       const formData = new FormData();
       formData.append('bookName', createForm.bookName);
       formData.append('inStock', createForm.inStock);
-      formData.append('price', createForm.price);
+      formData.append('price', parseCurrency(createForm.price));
       formData.append('description', createForm.description);
       formData.append('numberOfPage', createForm.numberOfPage);
       const formattedDate = convertToApiFormat(createForm.publishedDate);
@@ -345,8 +365,7 @@ const BookList = () => {
   };
 
   const handleEdit = (book) => {
-    // Tìm chỉ số thumbnail dựa trên dữ liệu từ backend
-    let thumbnailIdx = 0; // Mặc định là 0 nếu không tìm thấy
+    let thumbnailIdx = 0;
     if (book.images && book.images.length > 0) {
       const thumbnailImage = book.images.find((img) => img.isThumbnail) || 
                             book.images.find((img) => img.url === book.urlThumbnail);
@@ -357,7 +376,7 @@ const BookList = () => {
       bookId: book.bookId,
       bookName: book.bookName,
       inStock: book.inStock,
-      price: book.price,
+      price: formatCurrency(book.price),
       description: book.description || '',
       numberOfPage: book.numberOfPage,
       publishedDate: convertToInputFormat(book.publishedDate),
@@ -366,7 +385,7 @@ const BookList = () => {
       publisherId: book.publisher.publisherId,
       distributorId: book.distributor.distributorId,
       bookTypeId: book.bookType.bookTypeId,
-      thumbnailIdx: thumbnailIdx, // Sử dụng chỉ số thumbnail thực tế
+      thumbnailIdx: thumbnailIdx,
       categoriesId: book.categories.map((cat) => cat.categoryId),
       images: [],
       newArrival: book.newArrival,
@@ -379,13 +398,17 @@ const BookList = () => {
   };
 
   const handleSaveEdit = async () => {
-    if (!validateBookForm(editForm, true)) return;
+    const formattedForm = {
+      ...editForm,
+      price: parseCurrency(editForm.price),
+    };
+    if (!validateBookForm(formattedForm, true)) return;
 
     try {
       const formData = new FormData();
       formData.append('bookName', editForm.bookName);
       formData.append('inStock', editForm.inStock);
-      formData.append('price', editForm.price);
+      formData.append('price', parseCurrency(editForm.price));
       formData.append('description', editForm.description);
       formData.append('numberOfPage', editForm.numberOfPage);
       const formattedDate = convertToApiFormat(editForm.publishedDate);
@@ -403,7 +426,6 @@ const BookList = () => {
       formData.append('newArrival', editForm.newArrival);
       formData.append('isDeleted', editForm.isDeleted);
 
-      // Điều chỉnh thumbnailIdx dựa trên danh sách ảnh còn lại
       const remainingOldImagesCount = oldImages.length - removedOldImageIds.length;
       let adjustedThumbnailIdx = editForm.thumbnailIdx;
       if (editForm.thumbnailIdx >= remainingOldImagesCount) {
@@ -415,7 +437,6 @@ const BookList = () => {
       editForm.categoriesId.forEach((id) => formData.append('categoriesId', id));
       editForm.images.forEach((file) => formData.append('images', file));
 
-      // Chỉ gửi các imageId còn lại, loại bỏ hoàn toàn các ID đã xóa
       const remainingImageIds = oldImages
         .filter((img) => !removedOldImageIds.includes(img.imageId))
         .map((img) => img.imageId);
@@ -505,7 +526,6 @@ const BookList = () => {
   const handleRemoveOldImage = (index, imageId) => {
     setImagePreviews((prev) => prev.filter((_, i) => i !== index));
     setRemovedOldImageIds((prev) => [...prev, imageId]);
-    // Cập nhật oldImages để loại bỏ ảnh đã xóa
     setOldImages((prev) => prev.filter((_, i) => i !== index));
     setEditForm((prev) => ({
       ...prev,
@@ -547,7 +567,7 @@ const BookList = () => {
           ...discount,
           startDate,
           endDate,
-          isActive: discount.isActive,
+          isActive: Boolean(discount.active), // Ép kiểu về boolean
         });
       } else {
         const now = new Date();
@@ -561,9 +581,10 @@ const BookList = () => {
           endDate: defaultDateTime,
           discountType: 'PERCENTAGE',
           discount: '',
-          isActive: true,
+          isActive: true, // Mặc định tích khi tạo mới
         });
       }
+      console.log('DiscountForm after fetch:', discount ? { ...discount, isActive: Boolean(discount.active) } : { bookId, isActive: true });
     } catch (err) {
       const now = new Date();
       const year = now.getFullYear();
@@ -576,14 +597,16 @@ const BookList = () => {
         endDate: defaultDateTime,
         discountType: 'PERCENTAGE',
         discount: '',
-        isActive: true,
+        isActive: true, // Mặc định tích khi tạo mới
       });
+      console.log('DiscountForm after error:', { bookId, isActive: true });
     }
   };
 
   const handleSaveDiscount = async () => {
     try {
       const { bookId, discountId, startDate, endDate, discountType, discount, isActive } = discountForm;
+      console.log('Saving discount with isActive:', isActive); // Kiểm tra giá trị trước khi gửi
       if (!discount) {
         toast.dismiss();
         toast.error('Giá trị khuyến mãi không được rỗng');
@@ -615,7 +638,7 @@ const BookList = () => {
         endDate: formattedEndDate,
         discountType,
         discount: parseFloat(discount),
-        isActive,
+        isActive: Boolean(isActive), // Đảm bảo gửi boolean
       };
 
       if (discountId) {
@@ -630,6 +653,14 @@ const BookList = () => {
     } catch (err) {
       toast.dismiss();
       toast.error(err?.response?.data?.message || 'Cập nhật khuyến mãi thất bại');
+    }
+  };
+
+  const handleConfirmDate = (field) => {
+    if (field === 'startDate' && startDateInputRef.current) {
+      startDateInputRef.current.blur();
+    } else if (field === 'endDate' && endDateInputRef.current) {
+      endDateInputRef.current.blur();
     }
   };
 
@@ -729,7 +760,7 @@ const BookList = () => {
                 <tr key={book.bookId} className="book-list__table-row">
                   <td>{truncateBookName(book.bookName)}</td>
                   <td>{book.inStock}</td>
-                  <td>{book.price.toLocaleString()} VNĐ</td>
+                  <td>{book.price.toLocaleString('vi-VN')} VNĐ</td>
                   <td>
                     <div className="book-list__datetime">
                       <span>{createdAt.time}</span>
@@ -827,7 +858,7 @@ const BookList = () => {
               <div className="book-list__detail-item"><strong>Tên sách:</strong> {viewBook.bookName}</div>
               <div className="book-list__detail-item"><strong>Số lượng:</strong> {viewBook.inStock}</div>
               <div className="book-list__detail-item"><strong>Đã bán:</strong> {viewBook.soldQuantity}</div>
-              <div className="book-list__detail-item"><strong>Giá:</strong> {viewBook.price.toLocaleString()} VNĐ</div>
+              <div className="book-list__detail-item"><strong>Giá:</strong> {viewBook.price.toLocaleString('vi-VN')} VNĐ</div>
               <div className="book-list__detail-item"><strong>Mô tả:</strong> <p>{viewBook.description || 'Không có mô tả'}</p></div>
               <div className="book-list__detail-item"><strong>Số trang:</strong> {viewBook.numberOfPage}</div>
               <div className="book-list__detail-item"><strong>Ngày xuất bản:</strong> {formatDisplayDate(viewBook.publishedDate)}</div>
@@ -869,20 +900,26 @@ const BookList = () => {
             <div className="book-list__form-group">
               <label className="book-list__label">Số lượng (≥ 0)</label>
               <input
-                type="number"
+                type="text"
                 placeholder="Số lượng..."
                 value={createForm.inStock}
-                onChange={(e) => setCreateForm({ ...createForm, inStock: e.target.value })}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^0-9]/g, '');
+                  setCreateForm({ ...createForm, inStock: value });
+                }}
                 className="book-list__input"
               />
             </div>
             <div className="book-list__form-group">
               <label className="book-list__label">Giá (> 0)</label>
               <input
-                type="number"
+                type="text"
                 placeholder="Giá (VNĐ)..."
-                value={createForm.price}
-                onChange={(e) => setCreateForm({ ...createForm, price: e.target.value })}
+                value={formatCurrency(createForm.price)}
+                onChange={(e) => {
+                  const rawValue = parseCurrency(e.target.value);
+                  setCreateForm({ ...createForm, price: rawValue });
+                }}
                 className="book-list__input"
               />
             </div>
@@ -899,10 +936,13 @@ const BookList = () => {
             <div className="book-list__form-group">
               <label className="book-list__label">Số trang (> 0)</label>
               <input
-                type="number"
+                type="text"
                 placeholder="Số trang..."
                 value={createForm.numberOfPage}
-                onChange={(e) => setCreateForm({ ...createForm, numberOfPage: e.target.value })}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^0-9]/g, '');
+                  setCreateForm({ ...createForm, numberOfPage: value });
+                }}
                 className="book-list__input"
               />
             </div>
@@ -918,10 +958,13 @@ const BookList = () => {
             <div className="book-list__form-group">
               <label className="book-list__label">Cân nặng (> 0)</label>
               <input
-                type="number"
+                type="text"
                 placeholder="Cân nặng (g)..."
                 value={createForm.weight}
-                onChange={(e) => setCreateForm({ ...createForm, weight: e.target.value })}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^0-9]/g, '');
+                  setCreateForm({ ...createForm, weight: value });
+                }}
                 className="book-list__input"
               />
             </div>
@@ -1097,20 +1140,26 @@ const BookList = () => {
             <div className="book-list__form-group">
               <label className="book-list__label">Số lượng (≥ 0)</label>
               <input
-                type="number"
+                type="text"
                 placeholder="Số lượng..."
                 value={editForm.inStock}
-                onChange={(e) => setEditForm({ ...editForm, inStock: e.target.value })}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^0-9]/g, '');
+                  setEditForm({ ...editForm, inStock: value });
+                }}
                 className="book-list__input"
               />
             </div>
             <div className="book-list__form-group">
               <label className="book-list__label">Giá (> 0)</label>
               <input
-                type="number"
+                type="text"
                 placeholder="Giá (VNĐ)..."
-                value={editForm.price}
-                onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
+                value={formatCurrency(editForm.price)}
+                onChange={(e) => {
+                  const rawValue = parseCurrency(e.target.value);
+                  setEditForm({ ...editForm, price: rawValue });
+                }}
                 className="book-list__input"
               />
             </div>
@@ -1127,10 +1176,13 @@ const BookList = () => {
             <div className="book-list__form-group">
               <label className="book-list__label">Số trang (> 0)</label>
               <input
-                type="number"
+                type="text"
                 placeholder="Số trang..."
                 value={editForm.numberOfPage}
-                onChange={(e) => setEditForm({ ...editForm, numberOfPage: e.target.value })}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^0-9]/g, '');
+                  setEditForm({ ...editForm, numberOfPage: value });
+                }}
                 className="book-list__input"
               />
             </div>
@@ -1146,10 +1198,13 @@ const BookList = () => {
             <div className="book-list__form-group">
               <label className="book-list__label">Cân nặng (> 0)</label>
               <input
-                type="number"
+                type="text"
                 placeholder="Cân nặng (g)..."
                 value={editForm.weight}
-                onChange={(e) => setEditForm({ ...editForm, weight: e.target.value })}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^0-9]/g, '');
+                  setEditForm({ ...editForm, weight: value });
+                }}
                 className="book-list__input"
               />
             </div>
@@ -1326,21 +1381,41 @@ const BookList = () => {
             <h3 className="book-list__modal-title">Quản lý khuyến mãi</h3>
             <div className="book-list__form-group">
               <label className="book-list__label">Ngày bắt đầu</label>
-              <input
-                type="datetime-local"
-                value={discountForm.startDate}
-                onChange={(e) => setDiscountForm({ ...discountForm, startDate: e.target.value })}
-                className="book-list__input"
-              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input
+                  type="datetime-local"
+                  value={discountForm.startDate}
+                  onChange={(e) => setDiscountForm({ ...discountForm, startDate: e.target.value })}
+                  className="book-list__input"
+                  ref={startDateInputRef}
+                />
+                <button
+                  className="book-list__modal-button"
+                  style={{ padding: '8px 12px' }}
+                  onClick={() => handleConfirmDate('startDate')}
+                >
+                  OK
+                </button>
+              </div>
             </div>
             <div className="book-list__form-group">
               <label className="book-list__label">Ngày kết thúc</label>
-              <input
-                type="datetime-local"
-                value={discountForm.endDate}
-                onChange={(e) => setDiscountForm({ ...discountForm, endDate: e.target.value })}
-                className="book-list__input"
-              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input
+                  type="datetime-local"
+                  value={discountForm.endDate}
+                  onChange={(e) => setDiscountForm({ ...discountForm, endDate: e.target.value })}
+                  className="book-list__input"
+                  ref={endDateInputRef}
+                />
+                <button
+                  className="book-list__modal-button"
+                  style={{ padding: '8px 12px' }}
+                  onClick={() => handleConfirmDate('endDate')}
+                >
+                  OK
+                </button>
+              </div>
             </div>
             <div className="book-list__form-group">
               <label className="book-list__label">Loại khuyến mãi</label>
@@ -1368,7 +1443,7 @@ const BookList = () => {
                 <label className="book-list__label">Kích hoạt</label>
                 <input
                   type="checkbox"
-                  checked={discountForm.isActive}
+                  checked={Boolean(discountForm.isActive)} // Ép kiểu về boolean
                   onChange={(e) => setDiscountForm({ ...discountForm, isActive: e.target.checked })}
                   className="book-list__checkbox"
                 />
